@@ -81,11 +81,19 @@ class ClientRendererSpec extends AnyWordSpec with Matchers {
           |  ) extends LogoutResponse
           |}
           |
-          |class Client[F[_]: Concurrent](
+          |trait Client[F[_]] {
+          |  def listPets(limit: Option[Int], headers: Headers = Headers.empty): F[ListPetsResponse]
+          |  def createPets(body: Components.RequestBodies.CreatePetRequest, headers: Headers = Headers.empty): F[CreatePetsResponse]
+          |  def updatePet(petId: Int, body: Components.RequestBodies.UpdatePetRequest, headers: Headers = Headers.empty): F[UpdatePetResponse]
+          |  def showPetById(petId: Int, headers: Headers = Headers.empty): F[ShowPetByIdResponse]
+          |  def logout(headers: Headers = Headers.empty): F[LogoutResponse]
+          |}
+          |
+          |class ClientImpl[F[_]: Concurrent](
           |  client: org.http4s.client.Client[F],
           |  baseUri: Uri,
           |  defaultHeaders: Headers = Headers.empty
-          |) {
+          |) extends Client[F] {
           |  import cats.syntax.functor._
           |  import org.http4s.Status._
           |  import Responses._
