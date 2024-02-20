@@ -1,6 +1,5 @@
 package net.girkin.ardeas.scala.http4s
 
-import cats.data.ValidatedNel
 import cats.*
 import cats.implicits.given
 import net.girkin.ardeas.Model.{Api, Default, HttpOperation, Parameter, PathSegment, Response, ResponseBody, Schema}
@@ -31,11 +30,23 @@ object ClientRenderer {
        |
        |${renderClientResponsesObject(api)}
        |
-       |${renderClientMethods(api)}
+       |${renderClientInterface(api)}
+       |
+       |${renderClientClass(api)}
        |""".stripMargin
   }
 
-  def renderClientMethods(api: Api) = {
+  def renderClientInterface(api: Api): String = {
+    val methodDefinitions = api.paths.map { httpOperation =>
+      methodDefinitionForOperation(httpOperation, PathVarTypes)
+    }
+
+    s"""trait Client[F[_]] {
+       |${indent(2)(methodDefinitions:_*)}
+       |}""".stripMargin
+  }
+
+  def renderClientClass(api: Api) = {
     val renderedOperations = for {
       operation <- api.paths
     } yield {
@@ -45,11 +56,11 @@ object ClientRenderer {
          |""".stripMargin
     }
 
-    s"""class Client[F[_]: Concurrent](
+    s"""class ClientImpl[F[_]: Concurrent](
        |  client: org.http4s.client.Client[F],
        |  baseUri: Uri,
        |  defaultHeaders: Headers = Headers.empty
-       |) {
+       |) extends Client[F] {
        |  import cats.syntax.functor._
        |  import org.http4s.Status._
        |  import Responses._
