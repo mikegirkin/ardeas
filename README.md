@@ -94,7 +94,8 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Ability to set headers for client
 - [x] Handle responses from components
 - [x] Support additionalImport in CLI
-- [ ] Non-required path parameters
+- [ ] Create directory when generating files
+- [ ] Check if optional parameter work
 - [ ] Introduce client interface
 - [ ] Improve error messaging in CLI
 - [ ] Support OneOf declaration
@@ -111,7 +112,6 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [ ] Server: Custom error handling for query parameters parsing errors
 - [ ] Obey parameter spec style/explode definition in openapi spec
 - [ ] Refactor spray codec renderer to use stricter Model types
-- [ ] Create directory when generating files
 - [ ] Imports for spray codecs
 - [ ] ...
 
