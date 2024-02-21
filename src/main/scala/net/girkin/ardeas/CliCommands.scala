@@ -8,13 +8,31 @@ import net.girkin.ardeas.scala.entities.EntitiesRenderer
 import net.girkin.ardeas.scala.http4s.{ClientRenderer, ServiceRenderer}
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, Paths}
+
+object CliHelpers {
+  def writeTextToFile(filePath: Path)(text: String) = {
+    val absolutePath = filePath.toAbsolutePath
+    val directory = filePath.getParent
+    Files.createDirectories(directory)
+    Files.write(absolutePath, text.getBytes(StandardCharsets.UTF_8))
+  }
+
+  def writeRenderResult(renderToFilePath: Option[Path])(renderedText: String) = {
+    val outAction = renderToFilePath.fold {
+      (text: String) => println(text)
+    } {
+      renderToFilePath => CliHelpers.writeTextToFile(renderToFilePath)
+    }
+    outAction(renderedText)
+  }
+}
 
 sealed trait CliCommand {
   def run(): Unit
 }
 
-final case class RenderEntities(openapiFilePath: Path, renderer: String, renderToFilePath: Path, `package`: Option[String], additionalImports: Vector[String]) extends CliCommand {
+final case class RenderEntities(openapiFilePath: Path, renderer: String, renderToFilePath: Option[Path], `package`: Option[String], additionalImports: Vector[String]) extends CliCommand {
   def run(): Unit = {
     val apiModelV = Parser.parse(openapiFilePath.toUri)
     val textE = for {
@@ -29,14 +47,14 @@ final case class RenderEntities(openapiFilePath: Path, renderer: String, renderT
       { error =>
         println(error)
       },
-      { renderedText =>
-        Files.write(renderToFilePath, renderedText.getBytes(StandardCharsets.UTF_8))
+      {
+        CliHelpers.writeRenderResult(renderToFilePath)
       }
     )
   }
 }
 
-final case class RenderCodecs(openapiFilePath: Path, renderer: String, renderToFilePath: Path, `package`: Option[String], additionalImports: Vector[String]) extends CliCommand {
+final case class RenderCodecs(openapiFilePath: Path, renderer: String, renderToFilePath: Option[Path], `package`: Option[String], additionalImports: Vector[String]) extends CliCommand {
   private val codecImplementations: Map[String, CodecRenderer] = Map(
     "spray" -> SprayCodecRenderer,
     "circe_scala2" -> Scala2CirceCodecRenderer
@@ -60,8 +78,8 @@ final case class RenderCodecs(openapiFilePath: Path, renderer: String, renderToF
       { error =>
         println(error)
       },
-      { renderedText =>
-        Files.write(renderToFilePath, renderedText.getBytes(StandardCharsets.UTF_8))
+      {
+        CliHelpers.writeRenderResult(renderToFilePath)
       }
     )
   }
@@ -81,13 +99,8 @@ final case class RenderService(openapiFilePath: Path, renderer: String, renderTo
     }
     result.fold({ error =>
       println(error)
-    }, { renderedText =>
-      val outAction = renderToFilePath.fold {
-        (text: String) => println(text)
-      } {
-        renderToFilePath => { (text: String) => Files.write(renderToFilePath, text.getBytes(StandardCharsets.UTF_8)) }
-      }
-      outAction(renderedText)
+    }, {
+      CliHelpers.writeRenderResult(renderToFilePath)
     })
   }
 }
@@ -106,13 +119,8 @@ final case class RenderClient(openapiFilePath: Path, renderer: String, renderToF
     }
     result.fold({ error =>
       println(error)
-    }, { renderedText =>
-      val outAction = renderToFilePath.fold {
-        (text: String) => println(text)
-      } {
-        renderToFilePath => { (text: String) => Files.write(renderToFilePath, text.getBytes(StandardCharsets.UTF_8)) }
-      }
-      outAction(renderedText)
+    }, {
+      CliHelpers.writeRenderResult(renderToFilePath)
     })
   }
 }

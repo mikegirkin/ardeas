@@ -60,9 +60,9 @@ object CLI {
   private def entitiesCommand(commandArgs: Array[String], namedArgs: Map[String, Vector[String]]): RenderEntities = {
     val openapiFilePath = CLP.parseArgument[String](commandArgs, 0)
     val renderer = CLP.parseArgument[String](commandArgs, 1)
-    val renderToFilePath = CLP.parseArgument[String](commandArgs, 2)
+    val renderToFilePath = if (commandArgs.length >= 3) Some(CLP.parseArgument[String](commandArgs, 2)) else None
     val openapiFile = Path.of(openapiFilePath).toAbsolutePath
-    val renderToFile = Path.of(renderToFilePath).toAbsolutePath
+    val renderToFile = renderToFilePath.map { str => Path.of(str).toAbsolutePath }
     val packageOpt = namedArgs.get("package").flatMap(_.headOption)
     val additionalImports = namedArgs.getOrElse("additionalImport", Vector.empty)
     RenderEntities(openapiFile, renderer, renderToFile, packageOpt, additionalImports)
@@ -71,9 +71,9 @@ object CLI {
   private def codecsCommand(commandArgs: Array[String], namedArgs: Map[String, Vector[String]]): RenderCodecs = {
     val openapiFilePath = CLP.parseArgument[String](commandArgs, 0)
     val renderer = CLP.parseArgument[String](commandArgs, 1)
-    val renderToFilePath = CLP.parseArgument[String](commandArgs, 2)
+    val renderToFilePath = if (commandArgs.length >= 3) Some(CLP.parseArgument[String](commandArgs, 2)) else None
     val openapiFile = Path.of(openapiFilePath).toAbsolutePath
-    val renderToFile = Path.of(renderToFilePath).toAbsolutePath
+    val renderToFile = renderToFilePath.map { str => Path.of(str).toAbsolutePath }
     val packageOpt = namedArgs.get("package").flatMap(_.headOption)
     val additionalImports = namedArgs.getOrElse("additionalImport", Vector.empty)
     RenderCodecs(openapiFile, renderer, renderToFile, packageOpt, additionalImports)
