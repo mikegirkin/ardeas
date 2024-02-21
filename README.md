@@ -94,9 +94,9 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Ability to set headers for client
 - [x] Handle responses from components
 - [x] Support additionalImport in CLI
+- [x] Introduce client interface
 - [ ] Create directory when generating files
 - [ ] Check if optional parameter work
-- [ ] Introduce client interface
 - [ ] Improve error messaging in CLI
 - [ ] Support OneOf declaration
 - [ ] Description to go into comments
