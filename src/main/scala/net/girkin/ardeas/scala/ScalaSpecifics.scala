@@ -196,18 +196,6 @@ object ScalaSpecifics extends Logging {
       s"${prefix}${ref.name}"
     }
 
-    //TODO: Remove that
-    def typeNameForField(outerTypeName: String)(field: EntityField): String = {
-      field.schema match {
-        case arr : Model.Schema.Array =>
-          typeDefinitionForArray(arr)
-        case ref : NamedSchemaRef =>
-          typeNameFromReference(ref)
-        case std : Model.Schema.StandardType =>
-          typeNameFromStandardType(std)
-      }
-    }
-
     def typeDefinitionForHmap(hmapSchema: Schema.HMap): String = {
       val elementTypeDefinition = typeNameForNonAnonymousObjectSchema(hmapSchema.itemSchema)
       s"Map[String, $elementTypeDefinition]"

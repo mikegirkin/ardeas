@@ -27,9 +27,13 @@ sbt "run entities ./src/test/resources/petstore.yaml scala ./entities.scala --pa
 
 ## Codecs
 
+### Spray
+
 ```sh
 sbt "run codecs ./src/test/resources/petstore.yaml spray ./codecs.scala"
 ```
+
+### Circe
 
 ```sh
 sbt "run codecs ./src/test/resources/petstore.yaml circe_scala2 ./codecs.scala --package org.petstore"
@@ -95,9 +99,10 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Handle responses from components
 - [x] Support additionalImport in CLI
 - [x] Introduce client interface
-- [ ] Create directory when generating files
-- [ ] Check if optional parameter work
+- [x] Create directory when generating files
 - [ ] Improve error messaging in CLI
+- [ ] Packaging and release as uberjar
+- [ ] Check if optional parameter work
 - [ ] Support OneOf declaration
 - [ ] Description to go into comments
 - [ ] Support 1st level anonymous schemas for names Requests and Responses 

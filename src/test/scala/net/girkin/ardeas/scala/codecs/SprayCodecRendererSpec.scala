@@ -51,6 +51,9 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
       val expected =
         """package my_package
           |
+          |import Components.Schemas._
+          |import spray.json._
+          |import spray.json.DefaultJsonProtocol._
           |import com.additional
           |
           |object Codecs {
@@ -66,7 +69,7 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |          Pet(
           |            id.convertTo[Long],
           |            name.convertTo[String],
-          |            tag.convertTo[String]
+          |            tag.convertTo[Option[String]]
           |          )
           |        case _ => throw DeserializationException(s"Could not deserialize ${json} to Pet")
           |      }
@@ -109,6 +112,9 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
       val expected =
         """package my_package
           |
+          |import Components.Schemas._
+          |import spray.json._
+          |import spray.json.DefaultJsonProtocol._
           |import com.additional
           |
           |object Codecs {
@@ -128,11 +134,11 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |          Pet(
           |            id.convertTo[Long],
           |            name.convertTo[String],
-          |            birthDate.convertTo[java.time.LocalDate],
-          |            created.convertTo[java.time.ZonedDateTime],
-          |            weight.convertTo[Double],
-          |            height.convertTo[Float],
-          |            tag.convertTo[String]
+          |            birthDate.convertTo[Option[java.time.LocalDate]],
+          |            created.convertTo[Option[java.time.ZonedDateTime]],
+          |            weight.convertTo[Option[Double]],
+          |            height.convertTo[Option[Float]],
+          |            tag.convertTo[Option[String]]
           |          )
           |        case _ => throw DeserializationException(s"Could not deserialize ${json} to Pet")
           |      }

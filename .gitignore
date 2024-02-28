@@ -6,3 +6,5 @@ target
 .run
 *.class
 *.log
+/.metals
+/.vscode/settings.json

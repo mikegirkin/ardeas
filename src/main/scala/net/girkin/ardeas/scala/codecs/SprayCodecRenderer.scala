@@ -10,7 +10,16 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
 
   override def renderCodecsForModels(api: Model.Api, `package`: Option[String], additionalImports: Iterable[String]): ValidatedNec[NotYetImplemented, String] = {
     validNec {
-      val prefix = packageAndImportsHeader(`package`, additionalImports).map { header =>
+      val requiredImports = Vector(
+        "Components.Schemas._",
+        "spray.json._",
+        "spray.json.DefaultJsonProtocol._"
+      )
+
+      val prefix = packageAndImportsHeader(
+        `package`,
+        requiredImports.appendedAll(additionalImports)
+      ).map { header =>
         header + doubleLineSeparator
       }.getOrElse("")
 
@@ -45,7 +54,7 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
     val scalaFieldNames = fieldNames.mkString(", ")
     val fieldConverters = entity.fields
       .map { field =>
-        val fieldType = ScalaSpecifics.TypeNaming.typeNameForField(typeName)(field)
+        val fieldType = ScalaSpecifics.TypeNaming.typeNameForField(field)
         fieldConverter(fieldType)(field)
       }.mkString("," + lineSeparator)
 
