@@ -1,5 +1,7 @@
 package net.girkin.ardeas
 
+import _root_.scala.collection.immutable.ListMap
+import cats.data.NonEmptyList
 import net.girkin.ardeas.Model.*
 import net.girkin.ardeas.scala.entities.EntitiesRenderer
 import org.scalatest.matchers.should.Matchers
@@ -23,13 +25,32 @@ class EntitiesRendererSpec extends AnyWordSpec with Matchers:
           ), true
         )
       )
+      val purchase = Schema.makeObject(
+        EntityField("id", Schema.StandardType("integer", None), true),
+        EntityField("totalPaid", Schema.StandardType("integer", None), true)
+      )
+      val refund = Schema.makeObject(
+        EntityField("id", Schema.StandardType("integer", None), true),
+        EntityField("purchaseId", Schema.StandardType("integer", None), true),
+        EntityField("totalRefunded", Schema.StandardType("integer", None), true),
+      )
+      val transaction = Schema.OneOf(
+        NonEmptyList.of(
+          NamedSchemaRef("Purchase"),
+          NamedSchemaRef("Refund")
+        ),
+        discriminator = None
+      )
       val api = Api(
         Vector.empty,
-        schemas = Map(
+        schemas = ListMap(
           "Pet" -> petEntity,
           "Pets" -> Schema.Array(NamedSchemaRef("Pet")),
           "RenamedPet" -> NamedSchemaRef("Pet"),
-          "UserId" -> Schema.StandardType("integer", Some("int64"))
+          "UserId" -> Schema.StandardType("integer", Some("int64")),
+          "Transaction" -> transaction,
+          "Purchase" -> purchase,
+          "Refund" -> refund,
         ),
         namedRequestBodies = Map(
           "CreatePetBody" -> RequestBody.Definition(
@@ -64,6 +85,16 @@ class EntitiesRendererSpec extends AnyWordSpec with Matchers:
           |    type Pets = Vector[Pet]
           |    type RenamedPet = Pet
           |    type UserId = Long
+          |    sealed trait Transaction
+          |    case class Purchase(
+          |      id: Int,
+          |      totalPaid: Int
+          |    ) extends Transaction
+          |    case class Refund(
+          |      id: Int,
+          |      purchaseId: Int,
+          |      totalRefunded: Int
+          |    ) extends Transaction
           |  }
           |
           |  object RequestBodies {

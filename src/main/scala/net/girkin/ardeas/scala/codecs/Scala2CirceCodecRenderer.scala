@@ -12,7 +12,10 @@ object Scala2CirceCodecRenderer extends CodecRenderer with Render with Logging {
 
   override def renderCodecsForModels(api: Model.Api, `package`: Option[String], additionalImportPackages: Iterable[String]): ValidatedNec[NotYetImplemented, String] = {
     val renderedCodecs: ValidatedNec[NotYetImplemented, Vector[String]] = api.schemas.collect {
-      case (name, obj: Model.Schema.Object) => renderCodecFor(name, obj).map(item => Vector(item))
+      case (name, obj: Model.Schema.Object) => renderCodecFor(name, obj)
+      case (name, oneOf: Model.Schema.OneOf) => renderCodecFor(name, oneOf).validNec[NotYetImplemented]
+    }.map {
+      item => item.map(Vector(_))
     }.toVector.combineAll
 
     val packageAndImportsPrefix = packageAndImportsHeader(
@@ -44,6 +47,23 @@ object Scala2CirceCodecRenderer extends CodecRenderer with Render with Logging {
          |${indent(2)(encoder)}
          |)""".stripMargin
     }
+  }
+
+  def renderCodecFor(typeName: String, oneOf: Model.Schema.OneOf): String = {
+    val decoderLines = oneOf.schemas.map { ref =>
+      s"Decoder[${ref.name}].map(identity[${typeName}])"
+    }.toList.mkString("," + lineSeparator)
+    val encoderLines = oneOf.schemas.map { ref =>
+      s"case item: ${ref.name} => item.asJson"
+    }
+    s"""implicit val ${typeName}Codec: Codec[${typeName}] = Codec.from(
+       |  List(
+       |${indent(4)(decoderLines)}
+       |  ).reduceLeft(_ or _),
+       |  Encoder.instance {
+       |${indent(4)(encoderLines.toList:_*)}
+       |  }
+       |)""".stripMargin
   }
 
   def renderFieldDecoderLine(field: Model.EntityField): String = {

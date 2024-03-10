@@ -185,7 +185,7 @@ object Http4sSpecifics {
       caseClassName,
       responseFields,
       classAccessModifier = Some("final"),
-      extendsClass = Some(adtTopName)
+      extendsClasses = Seq(adtTopName)
     )
   }
   private def renderOtherResponseCaseClass(adtTopName: String, standardFields: Vector[CaseClassFieldDescription]): String = {
@@ -197,7 +197,7 @@ object Http4sSpecifics {
       responseCaseClassName(adtTopName, None),
       otherResponseFields ++ standardFields,
       classAccessModifier = Some("final"),
-      extendsClass = Some(adtTopName),
+      extendsClasses = Seq(adtTopName),
       effect = Some("[F[_]]")
     )
   }

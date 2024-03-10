@@ -160,6 +160,48 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |      }
           |    }
           |  }
+          |  implicit val PurchaseFormat: RootJsonFormat[Purchase] = new RootJsonFormat[Purchase] {
+          |    override def write(obj: Purchase): JsValue = JsObject(
+          |      "id" -> JsNumber(obj.id),
+          |      "productId" -> JsNumber(obj.productId),
+          |      "quantity" -> JsNumber(obj.quantity),
+          |      "totalPaid" -> JsNumber(obj.totalPaid),
+          |      "timestamp" -> JsString(obj.timestamp.toString)
+          |    )
+          |    override def read(json: JsValue): Purchase = {
+          |      json.asJsObject.getFields("id", "productId", "quantity", "totalPaid", "timestamp") match {
+          |        case Seq(id, productId, quantity, totalPaid, timestamp) =>
+          |          Purchase(
+          |            id.convertTo[Int],
+          |            productId.convertTo[Int],
+          |            quantity.convertTo[Int],
+          |            totalPaid.convertTo[Int],
+          |            timestamp.convertTo[java.time.ZonedDateTime]
+          |          )
+          |        case _ => throw DeserializationException(s"Could not deserialize ${json} to Purchase")
+          |      }
+          |    }
+          |  }
+          |  implicit val RefundFormat: RootJsonFormat[Refund] = new RootJsonFormat[Refund] {
+          |    override def write(obj: Refund): JsValue = JsObject(
+          |      "id" -> JsNumber(obj.id),
+          |      "purchaseId" -> JsNumber(obj.purchaseId),
+          |      "refunded" -> JsNumber(obj.refunded),
+          |      "timestamp" -> JsString(obj.timestamp.toString)
+          |    )
+          |    override def read(json: JsValue): Refund = {
+          |      json.asJsObject.getFields("id", "purchaseId", "refunded", "timestamp") match {
+          |        case Seq(id, purchaseId, refunded, timestamp) =>
+          |          Refund(
+          |            id.convertTo[Int],
+          |            purchaseId.convertTo[Int],
+          |            refunded.convertTo[Int],
+          |            timestamp.convertTo[java.time.ZonedDateTime]
+          |          )
+          |        case _ => throw DeserializationException(s"Could not deserialize ${json} to Refund")
+          |      }
+          |    }
+          |  }
           |}""".stripMargin
 
       rendered shouldBe expected
