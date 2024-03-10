@@ -7,7 +7,8 @@ This is a client and service skeleton code generator from OpenAPI specs
 - no support for anonymous objects anywhere
 - no support for OpenAPI auth specification
 - no support for parameters in `components`
-- no support for `oneOf` and `allOf` constructs
+- Only `oneOf` construct containing refs is supported
+- no support for `oneOf` and `anyOf` constructs
 - only supports `application/json` responses media type
 
 # Current generators
@@ -100,10 +101,20 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Support additionalImport in CLI
 - [x] Introduce client interface
 - [x] Create directory when generating files
+- [x] Imports for spray codecs
+- [ ] Support OneOf declaration
+  - [ ] without discriminator
+    - [x] circe
+    - [ ] spray
+  - [ ] with discriminator
+    - [ ] circe
+    - [ ] spray
+- [ ] Fix spray optional codecs (petstore_ext)
+- [ ] Fix spray java time codecs (petstore_ext)
+- [ ] Support headers in the responses
 - [ ] Improve error messaging in CLI
 - [ ] Packaging and release as uberjar
 - [ ] Check if optional parameter work
-- [ ] Support OneOf declaration
 - [ ] Description to go into comments
 - [ ] Support 1st level anonymous schemas for names Requests and Responses 
 - [ ] Support no content responses
@@ -117,7 +128,6 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [ ] Server: Custom error handling for query parameters parsing errors
 - [ ] Obey parameter spec style/explode definition in openapi spec
 - [ ] Refactor spray codec renderer to use stricter Model types
-- [ ] Imports for spray codecs
 - [ ] ...
 
 

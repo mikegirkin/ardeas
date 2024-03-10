@@ -1,5 +1,6 @@
 package net.girkin.ardeas
 
+import cats.data.NonEmptyList
 import io.swagger.v3.oas.models.Components
 import net.girkin.ardeas.Model.PathSegment.StringSegment
 
@@ -102,6 +103,11 @@ object Model:
     required: Boolean
   )
 
+  final case class Discriminator(
+    propertyName: String,
+    mapping: Option[Map[String, String]]
+  )
+
   sealed trait Schema
   object Schema {
     final case class Object(
@@ -119,6 +125,11 @@ object Model:
 
     final case class HMap(
       itemSchema: InnerSchema
+    ) extends Schema
+
+    final case class OneOf(
+      schemas: NonEmptyList[NamedSchemaRef],
+      discriminator: Option[Discriminator]
     ) extends Schema
 
     def makeObject(fields: EntityField*): Object = Object(fields.toVector)

@@ -4,7 +4,6 @@ import cats.data.ValidatedNec
 import net.girkin.ardeas.ValidatedUtils.*
 import net.girkin.ardeas.{Logging, Model}
 import net.girkin.ardeas.Model._
-import net.girkin.ardeas.scala.entities.EntitiesRenderer.renderCaseClass
 import net.girkin.ardeas.RenderUtils.*
 
 case class NotYetImplemented(
@@ -244,7 +243,7 @@ object ScalaSpecifics extends Logging {
       typeName: String,
       fields: Seq[CaseClassFieldDescription],
       classAccessModifier: Option[String] = None,
-      extendsClass: Option[String] = None,
+      extendsClasses: Seq[String] = Seq.empty,
       methodsBody: Option[String] = None,
       effect: Option[String] = None
     ) = {
@@ -253,7 +252,11 @@ object ScalaSpecifics extends Logging {
         }.mkString("," + lineSeparator)
 
       val prefix = classAccessModifier.map(_ + " ").getOrElse("")
-      val extendsClause = extendsClass.map(className => s" extends $className").getOrElse("")
+      val extendsClause = extendsClasses.mkStringIfNonEmpty(
+        " extends ",
+        " with ",
+        ""
+      )
       val methodsClause = methodsBody.map { methods =>
         s""" {
            |${indent(2)(methods)}

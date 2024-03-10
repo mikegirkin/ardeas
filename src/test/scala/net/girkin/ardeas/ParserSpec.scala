@@ -1,8 +1,9 @@
 package net.girkin.ardeas
 
+import cats.data.NonEmptyList
 import cats.data.Validated.Valid
 import net.girkin.ardeas.Model.Parameter.{PathParameter, QueryParameter}
-import net.girkin.ardeas.Model.{RequestBody, ResponseBody}
+import net.girkin.ardeas.Model.{NamedSchemaRef, Parameter, RequestBody, ResponseBody}
 import net.girkin.ardeas.parser.Parser
 import org.scalatest.Inside
 import org.scalatest.matchers.should.Matchers
@@ -125,6 +126,18 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
             ),
             Some(RequestBody.NamedRef("UpdatePetRequest"))
           ),
+          Model.HttpOperation(
+            Model.Path(List(Model.PathSegment.StringSegment("transactions"), Model.PathSegment.TemplatedParameter("userId"))),
+            Model.HttpVerb.Get,
+            Some("getTransactionById"),
+            Vector(
+              PathParameter("userId", Model.Schema.StandardType("string", None))
+            ),
+            Vector(
+              Model.Response(200, ResponseBody.Definition(Some(Model.NamedSchemaRef("Transaction"))))
+            ),
+            None
+          )
         ),
         Map(
           "Pet" -> Model.Schema.makeObject(
@@ -142,6 +155,23 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
             Model.EntityField("code", Model.Schema.StandardType("integer", Some("int32")), true),
             Model.EntityField("message", Model.Schema.StandardType("string", None), true)
           ),
+          "Purchase" -> Model.Schema.makeObject(
+            Model.EntityField("id", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("productId", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("quantity", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("totalPaid", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("timestamp", Model.Schema.StandardType("string", Some("datetime")), true)
+          ),
+          "Refund" -> Model.Schema.makeObject(
+            Model.EntityField("id", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("purchaseId", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("refunded", Model.Schema.StandardType("integer", None), true),
+            Model.EntityField("timestamp", Model.Schema.StandardType("string", Some("datetime")), true)
+          ),
+          "Transaction" -> Model.Schema.OneOf(
+            NonEmptyList.of(NamedSchemaRef("Purchase"), NamedSchemaRef("Refund")),
+            None
+          )
         ),
         Map(
           "CreatePetRequest" -> Model.RequestBody.Definition(

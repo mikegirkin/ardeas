@@ -105,6 +105,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /transactions/{userId}/:
+    get:
+      summary: Info about specific transaction
+      operationId: getTransactionById
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of a transaction to retrieve
+      responses:
+        '200':
+          description: Ok response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
 components:
   schemas:
     Pet:
@@ -150,6 +168,47 @@ components:
           format: int32
         message:
           type: string
+    Transaction:
+      oneOf:
+        - $ref: '#/components/schemas/Purchase'
+        - $ref: '#/components/schemas/Refund'
+    Purchase:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        totalPaid:
+          type: integer
+        timestamp:
+          type: string
+          format: datetime
+      required:
+        - id
+        - productId
+        - quantity
+        - totalPaid
+        - timestamp
+    Refund:
+      type: object
+      properties:
+        id:
+          type: integer
+        purchaseId:
+          type: integer
+        refunded:
+          type: integer
+        timestamp:
+          type: string
+          format: datetime
+      required:
+        - id
+        - purchaseId
+        - refunded
+        - timestamp
   requestBodies:
     UpdatePetRequest:
       description: Update a pet in the store

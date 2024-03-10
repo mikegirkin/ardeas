@@ -2,10 +2,11 @@ package net.girkin.ardeas.parser
 
 import cats.*
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Kleisli, NonEmptyChain, OptionT, Reader, ValidatedNec}
+import cats.data.{Kleisli, NonEmptyChain, NonEmptyList, OptionT, Reader, ValidatedNec}
+import cats.data.given
 import cats.implicits.given
 import cats.syntax.either.*
-import io.swagger.v3.oas.models.media.{ArraySchema, BooleanSchema, DateSchema, DateTimeSchema, IntegerSchema, MapSchema, NumberSchema, ObjectSchema, Schema, StringSchema, UUIDSchema}
+import io.swagger.v3.oas.models.media.{ArraySchema, BooleanSchema, ComposedSchema, DateSchema, DateTimeSchema, IntegerSchema, MapSchema, NumberSchema, ObjectSchema, Schema, StringSchema, UUIDSchema}
 import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.{Operation, PathItem}
@@ -19,19 +20,22 @@ import net.girkin.ardeas.parser.{ParsingError, ParsingLocation as PL}
 import net.girkin.ardeas.parser.ParsingError.HttpOperationParsingError
 import net.girkin.ardeas.{Logging, Model, ParserKleisliUtils}
 import io.swagger.v3.oas.models as oapiModels
+import net.girkin.ardeas.parser.ParsingLocation.SchemaLocation
 
 import java.net.URI
 import _root_.scala.jdk.CollectionConverters.*
+import scala.collection.immutable.ListMap
 
 object Parser extends Logging:
 
-  def parse(openapiFileURL: URI): ValidatedNec[ParsingError, Model.Api] =
+  def parse(openapiFileURL: URI): ValidatedNec[ParsingError, Model.Api] = {
     val parseResult: SwaggerParseResult = new OpenAPIV3Parser().readLocation(openapiFileURL.toString, List.empty.asJava, new ParseOptions)
     val api = parseResult.getOpenAPI
 
     val unparsedNamedSchemasMap = Option(api.getComponents)
       .flatMap(c => Option(c.getSchemas.asScala))
-      .map(_.toMap)
+      // ListMap - to keep the order defined in the yaml file
+      .map(schemaMap => ListMap.from(schemaMap))
       .getOrElse(Map.empty)
     val knownSchemaNames = unparsedNamedSchemasMap.keys.toList
     val namedSchemasV = parseNamedSchemas(unparsedNamedSchemasMap)
@@ -59,6 +63,7 @@ object Parser extends Logging:
         namedResponses = namedResponses
       )
     }
+  }
 
   def parsePaths(knownSchemaNames: List[String], knownNamedRequestBodies: List[String], knownNamedResponses: List[String], paths: Map[String, PathItem]): ValidatedNec[ParsingError, Vector[Model.HttpOperation]] =
     paths.map { (pathStr, pathItem) =>
@@ -302,7 +307,11 @@ object Parser extends Logging:
   private def parseSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String], schema: Schema[_]): ValidatedNec[ParsingError, SchemaOrRef] = {
     import ParserKleisliUtils.*
 
-    (parseStdTypeSchema orTryParseWith (parseObjectSchema(schemaLocation, knownSchemaNames)) orTryParseWith parseRefSchema(knownSchemaNames) orTryParseWith (parseArraySchema(schemaLocation, knownSchemaNames)))
+    (parseStdTypeSchema orTryParseWith
+      parseObjectSchema(schemaLocation, knownSchemaNames) orTryParseWith
+      parseNamedSchemaRef(knownSchemaNames) orTryParseWith
+      parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith
+      parseOneOfSchema(schemaLocation, knownSchemaNames))
       .closeWithError(ParsingError.SchemaParsingError(schemaLocation, "Unknown schema"))
       .map[SchemaOrRef](identity)
       .apply(schema)
@@ -330,7 +339,7 @@ object Parser extends Logging:
       parsedStdType.validNec
   }
 
-  private def parseRefSchema(knownSchemaNames: List[String]): PartialSchemaParser[Model.NamedSchemaRef] = Kleisli { schema =>
+  private def parseNamedSchemaRef(knownSchemaNames: List[String]): PartialSchemaParser[Model.NamedSchemaRef] = Kleisli { schema =>
     Option(schema.get$ref()).map(
       parseNamedRef(knownSchemaNames, Constants.Components.SchemasRef, NamedSchemaRef.apply)
     )
@@ -362,16 +371,50 @@ object Parser extends Logging:
       }
   }
 
+  private def oapiDiscriminatorToModel(schemaLocation: PL.SchemaLocation, oapiDiscriminator: oapiModels.media.Discriminator): ValidatedNec[ParsingError, Model.Discriminator] = {
+    val propertyNameV = Option(oapiDiscriminator.getPropertyName).fold(
+      ParsingError.SchemaParsingError(schemaLocation, "discriminator can not be empty").invalidNec
+    ) { str =>
+      str.validNec
+    }
+    val mapping = Option(oapiDiscriminator.getMapping).map(_.asScala.toMap)
+    propertyNameV.map { propertyName =>
+      Model.Discriminator(propertyName, mapping)
+    }
+  }
+
+  private def parseOneOfSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[Model.Schema.OneOf] = PartialSchemaParser.fromPartialFunction {
+    case schema: ComposedSchema =>
+      val oneOfList = Option(schema.getOneOf).map(_.asScala.toList)
+      oneOfList.fold(
+        ParsingError.SchemaParsingError(schemaLocation, "Anything beyond OneOf schemas with references is not supported yet").invalidNec
+      ) {
+        case Nil => ParsingError.SchemaParsingError(schemaLocation, "Anything beyond OneOf schemas with references is not supported yet").invalidNec
+        case head :: tail =>
+          val discriminatorV = Option(schema.getDiscriminator).map {
+            d => oapiDiscriminatorToModel(schemaLocation, d)
+          }.sequence
+          val parsedRefsV = NonEmptyList(head, tail).map { ref =>
+            parseNamedSchemaRef(knownSchemaNames)(ref).getOrElse(ParsingError.SchemaParsingError(schemaLocation, "").invalidNec)
+          }.sequence
+
+          (discriminatorV, parsedRefsV).mapN { (discriminator, parsedRefs) =>
+            Model.Schema.OneOf(parsedRefs, discriminator)
+          }
+      }
+
+  }
+
   private def parseAsNonAnonymousObjectSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[NonAnonymousObjectSchema] = {
     import ParserKleisliUtils.orTryParseWith
 
-    parseStdTypeSchema orTryParseWith parseRefSchema(knownSchemaNames) orTryParseWith parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith parseObjectAsHMap(schemaLocation, knownSchemaNames)
+    parseStdTypeSchema orTryParseWith parseNamedSchemaRef(knownSchemaNames) orTryParseWith parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith parseObjectAsHMap(schemaLocation, knownSchemaNames)
   }
 
   private def parseAsInnerSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[InnerSchema] = {
     import ParserKleisliUtils.orTryParseWith
 
-    parseStdTypeSchema orTryParseWith parseRefSchema(knownSchemaNames) orTryParseWith parseArraySchema(schemaLocation, knownSchemaNames)
+    parseStdTypeSchema orTryParseWith parseNamedSchemaRef(knownSchemaNames) orTryParseWith parseArraySchema(schemaLocation, knownSchemaNames)
   }
 
   private def parseObjectAsObject(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[Model.Schema.Object] = PartialSchemaParser.fromPartialOptionalFunction {
@@ -411,7 +454,7 @@ object Parser extends Logging:
       itemV => itemV.map(item => Vector(item))
     ).toList
       .combineAll
-      .map(_.toMap)
+      .map(x => _root_.scala.collection.immutable.ListMap(x:_*))
   }
 
   def parseComponentsRequestBodies(knownSchemaNames: List[String], requestBodies: Map[String, oapiModels.parameters.RequestBody]): ValidatedNec[ParsingError, Map[String, Model.RequestBody.Definition]] = {
