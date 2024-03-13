@@ -144,19 +144,51 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |      }
           |    }
           |  }
-          |  implicit val ErrorFormat: RootJsonFormat[Error] = new RootJsonFormat[Error] {
-          |    override def write(obj: Error): JsValue = JsObject(
-          |      "code" -> JsNumber(obj.code),
+          |  implicit val NotFoundFormat: RootJsonFormat[NotFound] = new RootJsonFormat[NotFound] {
+          |    override def write(obj: NotFound): JsValue = JsObject(
+          |      "type" -> JsString(obj.type.toString),
           |      "message" -> JsString(obj.message.toString)
           |    )
-          |    override def read(json: JsValue): Error = {
-          |      json.asJsObject.getFields("code", "message") match {
-          |        case Seq(code, message) =>
-          |          Error(
-          |            code.convertTo[Int],
+          |    override def read(json: JsValue): NotFound = {
+          |      json.asJsObject.getFields("type", "message") match {
+          |        case Seq(type, message) =>
+          |          NotFound(
+          |            type.convertTo[String],
           |            message.convertTo[String]
           |          )
-          |        case _ => throw DeserializationException(s"Could not deserialize ${json} to Error")
+          |        case _ => throw DeserializationException(s"Could not deserialize ${json} to NotFound")
+          |      }
+          |    }
+          |  }
+          |  implicit val NoAccessFormat: RootJsonFormat[NoAccess] = new RootJsonFormat[NoAccess] {
+          |    override def write(obj: NoAccess): JsValue = JsObject(
+          |      "type" -> JsString(obj.type.toString),
+          |      "message" -> JsString(obj.message.toString)
+          |    )
+          |    override def read(json: JsValue): NoAccess = {
+          |      json.asJsObject.getFields("type", "message") match {
+          |        case Seq(type, message) =>
+          |          NoAccess(
+          |            type.convertTo[String],
+          |            message.convertTo[String]
+          |          )
+          |        case _ => throw DeserializationException(s"Could not deserialize ${json} to NoAccess")
+          |      }
+          |    }
+          |  }
+          |  implicit val UnsupportedOperationFormat: RootJsonFormat[UnsupportedOperation] = new RootJsonFormat[UnsupportedOperation] {
+          |    override def write(obj: UnsupportedOperation): JsValue = JsObject(
+          |      "type" -> JsString(obj.type.toString),
+          |      "message" -> JsString(obj.message.toString)
+          |    )
+          |    override def read(json: JsValue): UnsupportedOperation = {
+          |      json.asJsObject.getFields("type", "message") match {
+          |        case Seq(type, message) =>
+          |          UnsupportedOperation(
+          |            type.convertTo[String],
+          |            message.convertTo[String]
+          |          )
+          |        case _ => throw DeserializationException(s"Could not deserialize ${json} to UnsupportedOperation")
           |      }
           |    }
           |  }

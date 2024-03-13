@@ -371,15 +371,25 @@ object Parser extends Logging:
       }
   }
 
-  private def oapiDiscriminatorToModel(schemaLocation: PL.SchemaLocation, oapiDiscriminator: oapiModels.media.Discriminator): ValidatedNec[ParsingError, Model.Discriminator] = {
+  private def oapiDiscriminatorToModel(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String], oapiDiscriminator: oapiModels.media.Discriminator): ValidatedNec[ParsingError, Model.Discriminator] = {
     val propertyNameV = Option(oapiDiscriminator.getPropertyName).fold(
       ParsingError.SchemaParsingError(schemaLocation, "discriminator can not be empty").invalidNec
     ) { str =>
       str.validNec
     }
-    val mapping = Option(oapiDiscriminator.getMapping).map(_.asScala.toMap)
-    propertyNameV.map { propertyName =>
-      Model.Discriminator(propertyName, mapping)
+    val mappingV = Option(oapiDiscriminator.getMapping)
+      .map(_.asScala.toMap)
+      .getOrElse(Map.empty)
+      .map { case (name, schemaRef) =>
+        parseNamedRef(knownSchemaNames, Constants.Components.SchemasRef, NamedSchemaRef.apply)(schemaRef).map { parsedRef =>
+          Vector(name -> parsedRef)
+        }
+      }
+      .toList
+      .combineAll
+
+    (propertyNameV, mappingV).mapN { case (propertyName, mapping) =>
+      Model.Discriminator(propertyName, mapping.toMap)
     }
   }
 
@@ -392,7 +402,7 @@ object Parser extends Logging:
         case Nil => ParsingError.SchemaParsingError(schemaLocation, "Anything beyond OneOf schemas with references is not supported yet").invalidNec
         case head :: tail =>
           val discriminatorV = Option(schema.getDiscriminator).map {
-            d => oapiDiscriminatorToModel(schemaLocation, d)
+            d => oapiDiscriminatorToModel(schemaLocation, knownSchemaNames, d)
           }.sequence
           val parsedRefsV = NonEmptyList(head, tail).map { ref =>
             parseNamedSchemaRef(knownSchemaNames)(ref).getOrElse(ParsingError.SchemaParsingError(schemaLocation, "").invalidNec)

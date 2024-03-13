@@ -105,7 +105,7 @@ object Model:
 
   final case class Discriminator(
     propertyName: String,
-    mapping: Option[Map[String, String]]
+    mapping: Map[String, NamedSchemaRef]
   )
 
   sealed trait Schema

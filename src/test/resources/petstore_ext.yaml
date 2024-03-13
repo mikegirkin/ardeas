@@ -158,14 +158,42 @@ components:
       items:
         type: string
     Error:
+      oneOf:
+        - $ref: '#/components/schemas/NotFound'
+        - $ref: '#/components/schemas/NoAccess'
+        - $ref: '#/components/schemas/UnsupportedOperation'
+      discriminator:
+        propertyName: "type"
+        mapping:
+          unsupported: '#/components/schemas/UnsupportedOperation'
+    NotFound:
       type: object
       required:
-        - code
+        - type
         - message
       properties:
-        code:
-          type: integer
-          format: int32
+        type:
+          type: string
+        message:
+          type: string
+    NoAccess:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+    UnsupportedOperation:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          type: string
         message:
           type: string
     Transaction:

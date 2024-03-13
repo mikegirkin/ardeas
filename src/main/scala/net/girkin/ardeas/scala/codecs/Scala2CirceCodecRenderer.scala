@@ -1,8 +1,8 @@
 package net.girkin.ardeas.scala.codecs
 
-import cats.data.ValidatedNec
+import cats.data.{NonEmptyList, ValidatedNec}
 import cats.implicits.given
-import net.girkin.ardeas.Model.Schema
+import net.girkin.ardeas.Model.{Discriminator, NamedSchemaRef, Schema}
 import net.girkin.ardeas.RenderUtils.packageClause
 import net.girkin.ardeas.scala.{NotYetImplemented, ScalaSpecifics}
 import net.girkin.ardeas.{Logging, Model, Render}
@@ -13,7 +13,7 @@ object Scala2CirceCodecRenderer extends CodecRenderer with Render with Logging {
   override def renderCodecsForModels(api: Model.Api, `package`: Option[String], additionalImportPackages: Iterable[String]): ValidatedNec[NotYetImplemented, String] = {
     val renderedCodecs: ValidatedNec[NotYetImplemented, Vector[String]] = api.schemas.collect {
       case (name, obj: Model.Schema.Object) => renderCodecFor(name, obj)
-      case (name, oneOf: Model.Schema.OneOf) => renderCodecFor(name, oneOf).validNec[NotYetImplemented]
+      case (name, oneOf: Model.Schema.OneOf) => renderCodecForOneOf(name, oneOf).validNec[NotYetImplemented]
     }.map {
       item => item.map(Vector(_))
     }.toVector.combineAll
@@ -49,21 +49,65 @@ object Scala2CirceCodecRenderer extends CodecRenderer with Render with Logging {
     }
   }
 
-  def renderCodecFor(typeName: String, oneOf: Model.Schema.OneOf): String = {
-    val decoderLines = oneOf.schemas.map { ref =>
+  def renderCodecForOneOf(typeName: String, oneOf: Model.Schema.OneOf): String = {
+    oneOf.discriminator.fold(
+      renderCodecForOneOfWithoutDiscriminator(typeName, oneOf.schemas)
+    ) { discriminator =>
+      renderCodecForOneOfWithDiscriminator(typeName, discriminator, oneOf.schemas)
+    }
+  }
+
+  def renderCodecForOneOfWithDiscriminator(typeName: String, discriminator: Discriminator, schemas: NonEmptyList[NamedSchemaRef]): String = {
+    val typesSpecifiedInMapping = discriminator.mapping.values.toSet
+
+    val typesNotSpecifiedInMapping = schemas.toList.toSet.diff(typesSpecifiedInMapping)
+
+    val directTypesLines = typesNotSpecifiedInMapping.map { ref =>
+      s"case \"${ref.name}\" => c.as[${ref.name}]"
+    }.toList
+
+    val mappingDefinitionLines = discriminator.mapping.map { case (name, ref) =>
+      s"case \"${name}\" => c.as[${ref.name}]"
+    }.toList
+
+    val decoder = s"""Decoder.instance[${typeName}] { c =>
+       |  c.downField(${discriminator.propertyName}).as[String] match {
+       |${indent(4)(mappingDefinitionLines:_*)}
+       |${indent(4)(directTypesLines:_*)}
+       |  }
+       |}""".stripMargin
+
+    s"""implicit val ${typeName}Codec: Codec[${typeName}] = Codec.from(
+       |${indent(2)(decoder)},
+       |${indent(2)(renderOneOfEncoder(schemas))}
+       |)""".stripMargin
+  }
+
+  def renderCodecForOneOfWithoutDiscriminator(typeName: String, schemas: NonEmptyList[NamedSchemaRef]): String = {
+    val decoderLines = schemas.map { ref =>
       s"Decoder[${ref.name}].map(identity[${typeName}])"
     }.toList.mkString("," + lineSeparator)
-    val encoderLines = oneOf.schemas.map { ref =>
+
+    val encoder = renderOneOfEncoder(schemas)
+    val decoder =
+      s"""List(
+         |${indent(2)(decoderLines)}
+         |).reduceLeft(_ or _)
+         |""".stripMargin
+
+    s"""implicit val ${typeName}Codec: Codec[${typeName}] = Codec.from(
+       |${indent(2)(decoder)},
+       |${indent(2)(encoder)}
+       |)""".stripMargin
+  }
+
+  def renderOneOfEncoder(schemas: NonEmptyList[NamedSchemaRef]): String = {
+    val encoderLines = schemas.map { ref =>
       s"case item: ${ref.name} => item.asJson"
     }
-    s"""implicit val ${typeName}Codec: Codec[${typeName}] = Codec.from(
-       |  List(
-       |${indent(4)(decoderLines)}
-       |  ).reduceLeft(_ or _),
-       |  Encoder.instance {
-       |${indent(4)(encoderLines.toList:_*)}
-       |  }
-       |)""".stripMargin
+    s"""Encoder.instance {
+       |${indent(2)(encoderLines.toList:_*)}
+       |}""".stripMargin
   }
 
   def renderFieldDecoderLine(field: Model.EntityField): String = {
