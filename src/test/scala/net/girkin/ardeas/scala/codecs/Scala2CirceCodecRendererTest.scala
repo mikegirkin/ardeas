@@ -157,5 +157,119 @@ class Scala2CirceCodecRendererTest extends AnyWordSpec with Matchers {
 
       rendered shouldBe Valid(expected).toValidatedNec
     }
+
+    "render a codec for ADT with discriminator" in {
+      val api = Api(
+        paths = Vector.empty,
+        schemas = Map(
+          "NotFound" -> Model.Schema.makeObject(
+            Model.EntityField("type", Model.Schema.StandardType("string", None), true),
+            Model.EntityField("message", Model.Schema.StandardType("string", None), true),
+          ),
+          "NoAccess" -> Model.Schema.makeObject(
+            Model.EntityField("type", Model.Schema.StandardType("string", None), true),
+            Model.EntityField("message", Model.Schema.StandardType("string", None), true),
+          ),
+          "UnsupportedOperation" -> Model.Schema.makeObject(
+            Model.EntityField("type", Model.Schema.StandardType("string", None), true),
+            Model.EntityField("message", Model.Schema.StandardType("string", None), true),
+          ),
+          "Error" -> Model.Schema.OneOf(
+            NonEmptyList.of(
+              NamedSchemaRef("NotFound"),
+              NamedSchemaRef("NoAccess"),
+              NamedSchemaRef("UnsupportedOperation")
+            ),
+            Some(
+              Discriminator(
+                "type",
+                Map(
+                  "unsupported" -> NamedSchemaRef("UnsupportedOperation")
+                )
+              )
+            )
+          )
+        ),
+        namedRequestBodies = Map.empty,
+        namedResponses = Map.empty
+      )
+
+      val expected =
+        s"""package test_package
+           |
+           |import io.circe.{HCursor, Codec, Json}
+           |import io.circe.syntax.EncoderOps
+           |import Components.Schemas._
+           |import com.additional
+           |
+           |object Codecs {
+           |  implicit val NotFoundCodec: Codec[NotFound] = Codec.from(
+           |    (c: HCursor) => {
+           |      for {
+           |        `type` <- c.downField("type").as[String]
+           |        message <- c.downField("message").as[String]
+           |      } yield {
+           |        NotFound(`type`, message)
+           |      }
+           |    },
+           |    (a: NotFound) => {
+           |      Json.obj(
+           |        "type" -> a.`type`.asJson,
+           |        "message" -> a.message.asJson
+           |      )
+           |    }
+           |  )
+           |  implicit val NoAccessCodec: Codec[NoAccess] = Codec.from(
+           |    (c: HCursor) => {
+           |      for {
+           |        `type` <- c.downField("type").as[String]
+           |        message <- c.downField("message").as[String]
+           |      } yield {
+           |        NoAccess(`type`, message)
+           |      }
+           |    },
+           |    (a: NoAccess) => {
+           |      Json.obj(
+           |        "type" -> a.`type`.asJson,
+           |        "message" -> a.message.asJson
+           |      )
+           |    }
+           |  )
+           |  implicit val UnsupportedOperationCodec: Codec[UnsupportedOperation] = Codec.from(
+           |    (c: HCursor) => {
+           |      for {
+           |        `type` <- c.downField("type").as[String]
+           |        message <- c.downField("message").as[String]
+           |      } yield {
+           |        UnsupportedOperation(`type`, message)
+           |      }
+           |    },
+           |    (a: UnsupportedOperation) => {
+           |      Json.obj(
+           |        "type" -> a.`type`.asJson,
+           |        "message" -> a.message.asJson
+           |      )
+           |    }
+           |  )
+           |  implicit val ErrorCodec: Codec[Error] = Codec.from(
+           |    Decoder.instance[Error] { c =>
+           |      c.downField(type).as[String] match {
+           |        case "unsupported" => c.as[UnsupportedOperation]
+           |        case "NotFound" => c.as[NotFound]
+           |        case "NoAccess" => c.as[NoAccess]
+           |      }
+           |    },
+           |    Encoder.instance {
+           |      case item: NotFound => item.asJson
+           |      case item: NoAccess => item.asJson
+           |      case item: UnsupportedOperation => item.asJson
+           |    }
+           |  )
+           |}""".stripMargin
+
+      val rendered = Scala2CirceCodecRenderer.renderCodecsForModels(api, Some("test_package"), Vector("com.additional"))
+
+      rendered shouldBe Valid(expected).toValidatedNec
+    }
   }
 }

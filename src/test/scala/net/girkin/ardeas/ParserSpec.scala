@@ -3,7 +3,7 @@ package net.girkin.ardeas
 import cats.data.NonEmptyList
 import cats.data.Validated.Valid
 import net.girkin.ardeas.Model.Parameter.{PathParameter, QueryParameter}
-import net.girkin.ardeas.Model.{NamedSchemaRef, Parameter, RequestBody, ResponseBody}
+import net.girkin.ardeas.Model.{Discriminator, NamedSchemaRef, Parameter, RequestBody, ResponseBody}
 import net.girkin.ardeas.parser.Parser
 import org.scalatest.Inside
 import org.scalatest.matchers.should.Matchers
@@ -151,9 +151,36 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
           ),
           "Pets" -> Model.Schema.Array(Model.NamedSchemaRef("Pet")),
           "Messages" -> Model.Schema.Array(Model.Schema.StandardType("string")),
-          "Error" -> Model.Schema.makeObject(
-            Model.EntityField("code", Model.Schema.StandardType("integer", Some("int32")), true),
-            Model.EntityField("message", Model.Schema.StandardType("string", None), true)
+          "Error" -> Model.Schema.OneOf(
+            NonEmptyList.of(
+              NamedSchemaRef("NotFound"),
+              NamedSchemaRef("NoAccess"),
+              NamedSchemaRef("UnsupportedOperation")
+            ),
+            Some(
+              Discriminator(
+                "type",
+                Map(
+                  "unsupported" -> NamedSchemaRef("UnsupportedOperation")
+                )
+              )
+            )
+          ),
+          "NotFound" -> Model.Schema.makeObject(
+            Model.EntityField("type", Model.Schema.StandardType("string", None), true),
+            Model.EntityField("message", Model.Schema.StandardType("string", None), true),
+          ),
+          "NoAccess" -> Model.Schema.makeObject(
+            Model.EntityField("type", Model.Schema.StandardType("string", None), true),
+            Model.EntityField("message", Model.Schema.StandardType("string", None), true),
+          ),
+          "UnsupportedOperation" -> Model.Schema.makeObject(
+            Model.EntityField("type", Model.Schema.StandardType("string", None), true),
+            Model.EntityField("message", Model.Schema.StandardType("string", None), true),
+          ),
+          "Transaction" -> Model.Schema.OneOf(
+            NonEmptyList.of(NamedSchemaRef("Purchase"), NamedSchemaRef("Refund")),
+            None
           ),
           "Purchase" -> Model.Schema.makeObject(
             Model.EntityField("id", Model.Schema.StandardType("integer", None), true),
@@ -168,10 +195,6 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
             Model.EntityField("refunded", Model.Schema.StandardType("integer", None), true),
             Model.EntityField("timestamp", Model.Schema.StandardType("string", Some("datetime")), true)
           ),
-          "Transaction" -> Model.Schema.OneOf(
-            NonEmptyList.of(NamedSchemaRef("Purchase"), NamedSchemaRef("Refund")),
-            None
-          )
         ),
         Map(
           "CreatePetRequest" -> Model.RequestBody.Definition(
