@@ -8,7 +8,7 @@ This is a client and service skeleton code generator from OpenAPI specs
 - no support for OpenAPI auth specification
 - no support for parameters in `components`
 - Only `oneOf` construct containing refs is supported
-- no support for `oneOf` and `anyOf` constructs
+- no support for `allOf` and `anyOf` constructs
 - only supports `application/json` responses media type
 
 # Current generators
@@ -102,15 +102,15 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Introduce client interface
 - [x] Create directory when generating files
 - [x] Imports for spray codecs
+- [ ] Fix spray optional codecs (petstore_ext)
+- [ ] Fix spray java time codecs (petstore_ext)
 - [ ] Support OneOf declaration
   - [ ] without discriminator
     - [x] circe
     - [ ] spray
   - [ ] with discriminator
-    - [ ] circe
+    - [x] circe
     - [ ] spray
-- [ ] Fix spray optional codecs (petstore_ext)
-- [ ] Fix spray java time codecs (petstore_ext)
 - [ ] Support headers in the responses
 - [ ] Improve error messaging in CLI
 - [ ] Packaging and release as uberjar

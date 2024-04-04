@@ -40,8 +40,11 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
        |}""".stripMargin
 
   def renderWriter(typeName: String, entity: Model.Schema.Object): String =
-    val propertyEncodeLines =
-      entity.fields.map(propertyDecodeLine).mkString("," + lineSeparator)
+    val propertyEncodeLines = entity.fields
+      .map { entityField =>
+        s"\"${entityField.name}\" -> obj.${ScalaSpecifics.VariableNaming.variableName(entityField.name)}.toJson"
+      }.mkString("," + lineSeparator)
+
     s"""override def write(obj: ${typeName}): JsValue = JsObject(
        |${indent(2)(propertyEncodeLines)}
        |)""".stripMargin
@@ -51,7 +54,14 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
     val jsonFieldNames = fieldNames
       .map(name => s"\"${name}\"")
       .mkString(", ")
-    val scalaFieldNames = fieldNames.mkString(", ")
+    val scalaFieldNames = fieldNames.map { fieldName =>
+      val variableName = ScalaSpecifics.VariableNaming.variableName(fieldName)
+      if(ScalaSpecifics.VariableNaming.isReservedWord(fieldName)) {
+        s"${variableName} @ _"
+      } else {
+        variableName
+      }
+    }.mkString(", ")
     val fieldConverters = entity.fields
       .map { field =>
         val fieldType = ScalaSpecifics.TypeNaming.typeNameForField(field)
@@ -68,31 +78,5 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
       |  }
       |}""".stripMargin
 
-  def propertyDecodeLine(entityField: EntityField): String =
-    s"\"${entityField.name}\" -> ${encoderFor(entityField)}"
-
-  def encoderFor(entityField: EntityField): String =
-    entityField.schema match {
-      case NamedSchemaRef(_) |
-           Model.Schema.Array(_) =>
-        s"obj.${entityField.name}.toJson"
-      case st : Model.Schema.StandardType =>
-        encoderForStandardType(st, s"obj.${entityField.name}")
-    }
-
-  def encoderForStandardType(stdType: Model.Schema.StandardType, propertyExtractor: String): String =
-    val sprayJsType = sprayJsTypeFor(stdType)
-    val propertyWriterSuffix = if stdType.`type` == "string" then ".toString" else ""
-    s"${sprayJsType}(${propertyExtractor}${propertyWriterSuffix})"
-
-  def sprayJsTypeFor(stdType: Model.Schema.StandardType): String =
-    stdType.`type` match {
-      case "integer" |
-           "number" => s"JsNumber"
-      case "string" => s"JsString"
-      case "boolean" => s"JsBoolean"
-      case _ => s"JsString"
-    }
-
   def fieldConverter(typeName: String)(field: EntityField) =
-    s"${field.name}.convertTo[${typeName}]"
+    s"${ScalaSpecifics.VariableNaming.variableName(field.name)}.convertTo[${typeName}]"
