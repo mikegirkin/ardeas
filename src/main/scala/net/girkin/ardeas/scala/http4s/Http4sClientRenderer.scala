@@ -8,8 +8,9 @@ import net.girkin.ardeas.scala.ScalaSpecifics
 import ScalaSpecifics.MethodNaming.*
 import Http4sSpecifics.*
 import net.girkin.ardeas.scala.ScalaSpecifics.TypeNaming
+import net.girkin.ardeas.scala.ClientRenderer
 
-object ClientRenderer {
+object Http4sClientRenderer extends ClientRenderer {
 
   def renderClient(api: Api, packageName: Option[String], additionalImportPackages: Iterable[String]): String = {
     val packageAndImportsClause = packageAndImportsHeader(

@@ -105,8 +105,14 @@ object ScalaSpecifics extends Logging {
       }
     }
 
-    def responseAdtTopName(operation: HttpOperation): String = {
-      capitalizeFirst(s"${methodNameForOperation(operation)}Response")
+    def responseAdtTopName(operation: HttpOperation, fullyQualified: Boolean = false): String = {
+      val adtTopName = capitalizeFirst(s"${methodNameForOperation(operation)}Response")
+
+      if(fullyQualified) {
+        s"Responses.${adtTopName}"
+      } else {
+        adtTopName
+      }
     }
 
     def methodDefinitionForOperation(

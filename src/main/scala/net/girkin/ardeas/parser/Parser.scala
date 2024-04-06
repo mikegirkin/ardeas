@@ -418,7 +418,10 @@ object Parser extends Logging:
   private def parseAsNonAnonymousObjectSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[NonAnonymousObjectSchema] = {
     import ParserKleisliUtils.orTryParseWith
 
-    parseStdTypeSchema orTryParseWith parseNamedSchemaRef(knownSchemaNames) orTryParseWith parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith parseObjectAsHMap(schemaLocation, knownSchemaNames)
+    parseStdTypeSchema orTryParseWith 
+      parseNamedSchemaRef(knownSchemaNames) orTryParseWith 
+      parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith 
+      parseObjectAsHMap(schemaLocation, knownSchemaNames)
   }
 
   private def parseAsInnerSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[InnerSchema] = {

@@ -109,6 +109,9 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
   - [ ] with discriminator
     - [ ] circe
     - [ ] spray
+- [ ] Move packages rendeering from RenderUtils to ScalaSpecifics
+- [ ] Url-encode parameters passed in the path in client
+- [ ] Url-decode parameters passed in the path in server (check if required) 
 - [ ] Fix spray optional codecs (petstore_ext)
 - [ ] Fix spray java time codecs (petstore_ext)
 - [ ] Support headers in the responses
