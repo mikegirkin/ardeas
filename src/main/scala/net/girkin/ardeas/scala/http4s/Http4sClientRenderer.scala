@@ -11,6 +11,7 @@ import net.girkin.ardeas.scala.ScalaSpecifics.TypeNaming
 import net.girkin.ardeas.scala.ClientRenderer
 
 object Http4sClientRenderer extends ClientRenderer {
+  private val headerParameter = ParameterDefinitionWithDefault("headers", "Headers", "Headers.empty")
 
   def renderClient(api: Api, packageName: Option[String], additionalImportPackages: Iterable[String]): String = {
     val packageAndImportsClause = packageAndImportsHeader(
@@ -39,7 +40,7 @@ object Http4sClientRenderer extends ClientRenderer {
 
   def renderClientInterface(api: Api): String = {
     val methodDefinitions = api.paths.map { httpOperation =>
-      methodDefinitionForOperation(httpOperation, PathVarTypes)
+      methodDefinitionForOperation(httpOperation, PathVarTypes, appendedParameters = List(headerParameter), effect = Some("F"))
     }
 
     s"""trait Client[F[_]] {
@@ -51,7 +52,7 @@ object Http4sClientRenderer extends ClientRenderer {
     val renderedOperations = for {
       operation <- api.paths
     } yield {
-      s"""${methodDefinitionForOperation(operation, PathVarTypes)} = {
+      s"""${methodDefinitionForOperation(operation, PathVarTypes, appendedParameters = List(headerParameter), effect = Some("F"))} = {
          |${indent(2)(renderRequestForOperation(operation))}
          |}
          |""".stripMargin

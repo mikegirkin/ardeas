@@ -132,7 +132,15 @@ object ServiceRenderer {
   }
 
   private[http4s] def renderImplementationTrait(api: Api) = {
-    val methods = api.paths.map { operation => methodDefinitionForOperation(operation, PathVarTypes, additionalParameters = Map("request" -> "RequestData[F, I]")) }
+    val methods = api.paths.map { operation =>
+      methodDefinitionForOperation(
+        operation,
+        PathVarTypes,
+        prependedParameters = Map("request" -> "RequestData[F, I]"),
+        appendedParameters = List(ParameterDefinitionWithDefault("headers", "Headers", "Headers.empty")),
+        effect = Some("F")
+      )
+    }
 
     s"""case class RequestData[F[_], I](
        |  headerData: I,

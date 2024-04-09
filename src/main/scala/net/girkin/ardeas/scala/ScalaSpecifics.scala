@@ -103,6 +103,12 @@ object ScalaSpecifics extends Logging {
   }
 
   object MethodNaming {
+    case class ParameterDefinitionWithDefault(
+      name: String,
+      `type`: String,
+      default: String
+    )
+
     def methodNameForOperation(operation: HttpOperation): String = {
       operation.operationId.getOrElse {
         s"`${operation.verb}${operation.path}`"
@@ -122,7 +128,10 @@ object ScalaSpecifics extends Logging {
     def methodDefinitionForOperation(
       operation: HttpOperation,
       pathVarTypesTranslator: StandardType => String,
-      additionalParameters: Map[String, String] = Map.empty
+      prependedParameters: Map[String, String] = Map.empty,
+      appendedParameters: List[ParameterDefinitionWithDefault] = List.empty,
+      effect: Option[String] = None,
+
     ): String = {
       val methodName = methodNameForOperation(operation)
       val pathParametersTypes: Map[String, String] =
@@ -165,17 +174,23 @@ object ScalaSpecifics extends Logging {
         s"$parameterName: $typeDefinition"
       }
 
-      val headerParameter = s"headers: Headers = Headers.empty"
-      val additionalParameterDefinitions = additionalParameters.map { case (name, typeName) => s"$name: $typeName" }
+      val prependedParameterDefinitions = prependedParameters.map { case (name, typeName) => s"$name: $typeName" }
+      val appendedParameterDefinitions = appendedParameters.map { case ParameterDefinitionWithDefault(name, typeName, default) => s"$name: $typeName = $default" }
       val parameterDefinitions = Vector.concat(
-        additionalParameterDefinitions,
+        prependedParameterDefinitions,
         pathParameterDefinitions,
         bodyParameter,
         queryParameterDefinitions,
-        List(headerParameter)
+        appendedParameterDefinitions
       )
-      val returnType = responseAdtTopName(operation)
-      s"def $methodName(${parameterDefinitions.mkString(", ")}): F[${returnType}]"
+      val cleanReturnType = responseAdtTopName(operation)
+      val effectfullReturnType = effect.fold(
+        cleanReturnType
+      ) { e =>
+        s"$e[$cleanReturnType]"
+      }
+
+      s"def $methodName(${parameterDefinitions.mkString(", ")}): $effectfullReturnType"
     }
   }
 
