@@ -102,8 +102,9 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Introduce client interface
 - [x] Create directory when generating files
 - [x] Imports for spray codecs
-- [ ] Fix spray optional codecs (petstore_ext)
-- [ ] Fix spray java time codecs (petstore_ext)
+- [x] Fix spray optional codecs (petstore_ext)
+- [ ] Support "noDefaultImports" CLI option
+- [ ] Support escapes for internal variables in generated client/service to prevent name clashes with parameters 
 - [ ] Support OneOf declaration
   - [ ] without discriminator
     - [x] circe
@@ -111,7 +112,7 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
   - [ ] with discriminator
     - [x] circe
     - [ ] spray
-- [ ] Move packages rendeering from RenderUtils to ScalaSpecifics
+- [ ] Move packages rendering from RenderUtils to ScalaSpecifics
 - [ ] Url-encode parameters passed in the path in client
 - [ ] Url-decode parameters passed in the path in server (check if required) 
 - [ ] Support headers in the responses

@@ -19,7 +19,7 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
       val expected: String =
         """implicit val PetFormat: RootJsonFormat[Pet] = new RootJsonFormat[Pet] {
           |  override def write(obj: Pet): JsValue = JsObject(
-          |    "id" -> JsNumber(obj.id)
+          |    "id" -> obj.id.toJson
           |  )
           |  override def read(json: JsValue): Pet = {
           |    json.asJsObject.getFields("id") match {
@@ -59,9 +59,9 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |object Codecs {
           |  implicit val PetFormat: RootJsonFormat[Pet] = new RootJsonFormat[Pet] {
           |    override def write(obj: Pet): JsValue = JsObject(
-          |      "id" -> JsNumber(obj.id),
-          |      "name" -> JsString(obj.name.toString),
-          |      "tag" -> JsString(obj.tag.toString)
+          |      "id" -> obj.id.toJson,
+          |      "name" -> obj.name.toJson,
+          |      "tag" -> obj.tag.toJson
           |    )
           |    override def read(json: JsValue): Pet = {
           |      json.asJsObject.getFields("id", "name", "tag") match {
@@ -77,8 +77,8 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |  }
           |  implicit val ErrorFormat: RootJsonFormat[Error] = new RootJsonFormat[Error] {
           |    override def write(obj: Error): JsValue = JsObject(
-          |      "code" -> JsNumber(obj.code),
-          |      "message" -> JsString(obj.message.toString)
+          |      "code" -> obj.code.toJson,
+          |      "message" -> obj.message.toJson
           |    )
           |    override def read(json: JsValue): Error = {
           |      json.asJsObject.getFields("code", "message") match {
@@ -120,13 +120,13 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |object Codecs {
           |  implicit val PetFormat: RootJsonFormat[Pet] = new RootJsonFormat[Pet] {
           |    override def write(obj: Pet): JsValue = JsObject(
-          |      "id" -> JsNumber(obj.id),
-          |      "name" -> JsString(obj.name.toString),
-          |      "birthDate" -> JsString(obj.birthDate.toString),
-          |      "created" -> JsString(obj.created.toString),
-          |      "weight" -> JsNumber(obj.weight),
-          |      "height" -> JsNumber(obj.height),
-          |      "tag" -> JsString(obj.tag.toString)
+          |      "id" -> obj.id.toJson,
+          |      "name" -> obj.name.toJson,
+          |      "birthDate" -> obj.birthDate.toJson,
+          |      "created" -> obj.created.toJson,
+          |      "weight" -> obj.weight.toJson,
+          |      "height" -> obj.height.toJson,
+          |      "tag" -> obj.tag.toJson
           |    )
           |    override def read(json: JsValue): Pet = {
           |      json.asJsObject.getFields("id", "name", "birthDate", "created", "weight", "height", "tag") match {
@@ -146,14 +146,14 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |  }
           |  implicit val NotFoundFormat: RootJsonFormat[NotFound] = new RootJsonFormat[NotFound] {
           |    override def write(obj: NotFound): JsValue = JsObject(
-          |      "type" -> JsString(obj.type.toString),
-          |      "message" -> JsString(obj.message.toString)
+          |      "type" -> obj.`type`.toJson,
+          |      "message" -> obj.message.toJson
           |    )
           |    override def read(json: JsValue): NotFound = {
           |      json.asJsObject.getFields("type", "message") match {
-          |        case Seq(type, message) =>
+          |        case Seq(`type` @ _, message) =>
           |          NotFound(
-          |            type.convertTo[String],
+          |            `type`.convertTo[String],
           |            message.convertTo[String]
           |          )
           |        case _ => throw DeserializationException(s"Could not deserialize ${json} to NotFound")
@@ -162,14 +162,14 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |  }
           |  implicit val NoAccessFormat: RootJsonFormat[NoAccess] = new RootJsonFormat[NoAccess] {
           |    override def write(obj: NoAccess): JsValue = JsObject(
-          |      "type" -> JsString(obj.type.toString),
-          |      "message" -> JsString(obj.message.toString)
+          |      "type" -> obj.`type`.toJson,
+          |      "message" -> obj.message.toJson
           |    )
           |    override def read(json: JsValue): NoAccess = {
           |      json.asJsObject.getFields("type", "message") match {
-          |        case Seq(type, message) =>
+          |        case Seq(`type` @ _, message) =>
           |          NoAccess(
-          |            type.convertTo[String],
+          |            `type`.convertTo[String],
           |            message.convertTo[String]
           |          )
           |        case _ => throw DeserializationException(s"Could not deserialize ${json} to NoAccess")
@@ -178,14 +178,14 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |  }
           |  implicit val UnsupportedOperationFormat: RootJsonFormat[UnsupportedOperation] = new RootJsonFormat[UnsupportedOperation] {
           |    override def write(obj: UnsupportedOperation): JsValue = JsObject(
-          |      "type" -> JsString(obj.type.toString),
-          |      "message" -> JsString(obj.message.toString)
+          |      "type" -> obj.`type`.toJson,
+          |      "message" -> obj.message.toJson
           |    )
           |    override def read(json: JsValue): UnsupportedOperation = {
           |      json.asJsObject.getFields("type", "message") match {
-          |        case Seq(type, message) =>
+          |        case Seq(`type` @ _, message) =>
           |          UnsupportedOperation(
-          |            type.convertTo[String],
+          |            `type`.convertTo[String],
           |            message.convertTo[String]
           |          )
           |        case _ => throw DeserializationException(s"Could not deserialize ${json} to UnsupportedOperation")
@@ -194,11 +194,11 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |  }
           |  implicit val PurchaseFormat: RootJsonFormat[Purchase] = new RootJsonFormat[Purchase] {
           |    override def write(obj: Purchase): JsValue = JsObject(
-          |      "id" -> JsNumber(obj.id),
-          |      "productId" -> JsNumber(obj.productId),
-          |      "quantity" -> JsNumber(obj.quantity),
-          |      "totalPaid" -> JsNumber(obj.totalPaid),
-          |      "timestamp" -> JsString(obj.timestamp.toString)
+          |      "id" -> obj.id.toJson,
+          |      "productId" -> obj.productId.toJson,
+          |      "quantity" -> obj.quantity.toJson,
+          |      "totalPaid" -> obj.totalPaid.toJson,
+          |      "timestamp" -> obj.timestamp.toJson
           |    )
           |    override def read(json: JsValue): Purchase = {
           |      json.asJsObject.getFields("id", "productId", "quantity", "totalPaid", "timestamp") match {
@@ -216,10 +216,10 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |  }
           |  implicit val RefundFormat: RootJsonFormat[Refund] = new RootJsonFormat[Refund] {
           |    override def write(obj: Refund): JsValue = JsObject(
-          |      "id" -> JsNumber(obj.id),
-          |      "purchaseId" -> JsNumber(obj.purchaseId),
-          |      "refunded" -> JsNumber(obj.refunded),
-          |      "timestamp" -> JsString(obj.timestamp.toString)
+          |      "id" -> obj.id.toJson,
+          |      "purchaseId" -> obj.purchaseId.toJson,
+          |      "refunded" -> obj.refunded.toJson,
+          |      "timestamp" -> obj.timestamp.toJson
           |    )
           |    override def read(json: JsValue): Refund = {
           |      json.asJsObject.getFields("id", "purchaseId", "refunded", "timestamp") match {

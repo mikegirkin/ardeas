@@ -4,9 +4,9 @@ import net.girkin.ardeas.Model
 import net.girkin.ardeas.Model.*
 import net.girkin.ardeas.Model.Schema.*
 import net.girkin.ardeas.RenderUtils.{doubleLineSeparator, indent}
-import net.girkin.ardeas.scala.ScalaSpecifics.MethodNaming.responseAdtTopName
+import net.girkin.ardeas.scala.ScalaSpecifics.MethodNaming.{ParameterDefinitionWithDefault, responseAdtTopName}
 import net.girkin.ardeas.scala.ScalaSpecifics.Rendering.CaseClassFieldDescription
-import net.girkin.ardeas.scala.ClientRenderer
+import net.girkin.ardeas.scala.{ClientRenderer, ScalaSpecifics}
 import net.girkin.ardeas.RenderUtils.*
 import net.girkin.ardeas.scala.pekko.PekkoSpecifics.*
 import net.girkin.ardeas.scala.ScalaSpecifics.*
@@ -130,7 +130,7 @@ object PekkoClientRenderer extends ClientRenderer {
 
   private def renderClientInterface(api: Api) = {
     val methodDefinitions = api.paths.map { httpOperation =>
-      methodDefinitionForOperation(httpOperation, PathVarTypes)
+      MethodNaming.methodDefinitionForOperation(httpOperation, PathVarTypes, appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[HttpHeader]", "Seq.empty")), effect = Some("Future"))
     }
 
     s"""trait Client {
@@ -138,67 +138,8 @@ object PekkoClientRenderer extends ClientRenderer {
        |}""".stripMargin
   }
 
-  private def methodDefinitionForOperation(
-    operation: HttpOperation,
-    pathVarTypesTranslator: StandardType => String,
-    additionalParameters: Map[String, String] = Map.empty
-  ): String = {
-    val methodName = MethodNaming.methodNameForOperation(operation)
-    val pathParametersTypes: Map[String, String] =
-      operation.parameters.collect {
-        case Parameter.PathParameter(name, schema) =>
-          name -> pathVarTypesTranslator(schema)
-      }.map {
-        case (parameterName, scalaType) => parameterName -> scalaType
-      }.toMap
-
-    val pathParameterDefinitions: Seq[String] = for {
-      parameterName <- operation.path.segments.collect { case PathSegment.TemplatedParameter(name) => name }
-    } yield {
-      val parameterType = pathParametersTypes.getOrElse(parameterName, "String")
-      s"$parameterName: $parameterType"
-    }
-
-    val bodyParameter = operation.requestBody.map {
-      case ref@Model.RequestBody.NamedRef(_) =>
-        s"body: ${TypeNaming.typeNameFromReference(ref, useFullyQualifiedRef = true)}"
-
-      case rb@Model.RequestBody.Definition(_, _) =>
-        val bodyParameterTypeName = rb.jsonContent.fold(
-          "String"
-        ) { schema =>
-          TypeNaming.typeNameForRequestBody(schema)
-        }
-        val bodyParameterType = TypeNaming.typeForOptional(bodyParameterTypeName, rb.required)
-        s"body: $bodyParameterType"
-    }
-
-    val queryParameterDefinitions = operation.parameters.collect {
-      case Parameter.QueryParameter(parameterName, arrSchema@Schema.Array(innerSchema), required) => {
-        parameterName -> TypeNaming.typeDefinitionForArray(arrSchema)
-      }
-      case Parameter.QueryParameter(parameterName, schema, required) => {
-        parameterName -> TypeNaming.typeForOptional(TypeNaming.typeNameForNonAnonymousObjectSchema(schema), required)
-      }
-    }.map { case (parameterName, typeDefinition) =>
-      s"$parameterName: $typeDefinition"
-    }
-
-    val headerParameter = s"headers: Seq[HttpHeader] = Seq.empty"
-    val additionalParameterDefinitions = additionalParameters.map { case (name, typeName) => s"$name: $typeName" }
-    val parameterDefinitions = Vector.concat(
-      additionalParameterDefinitions,
-      pathParameterDefinitions,
-      bodyParameter,
-      queryParameterDefinitions,
-      List(headerParameter)
-    )
-    val returnType = responseAdtTopName(operation, fullyQualified = true)
-    s"def $methodName(${parameterDefinitions.mkString(", ")}): Future[${returnType}]"
-  }
-
   private def renderSingleOperation(operation: HttpOperation): String = {
-    val methodDefinition = methodDefinitionForOperation(operation, PathVarTypes)
+    val methodDefinition = MethodNaming.methodDefinitionForOperation(operation, PathVarTypes, appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[HttpHeader]", "Seq.empty")), effect = Some("Future"))
     val responseAdtTopName = MethodNaming.responseAdtTopName(operation, fullyQualified = true)
 
     val requestBuilder = requestBuilderLines(operation)
@@ -265,7 +206,7 @@ object PekkoClientRenderer extends ClientRenderer {
        |""".stripMargin
   }
 
-  def requestBuilderLines(operation: HttpOperation): String = {
+  private def requestBuilderLines(operation: HttpOperation): String = {
     val method = s"HttpMethods.${operation.verb.toString.toUpperCase}"
     operation.requestBody.fold(
       s"""request <- Future.successful(
@@ -344,87 +285,4 @@ object PekkoClientRenderer extends ClientRenderer {
        |${indent(2, separator = doubleLineSeparator)(operationImplementations: _*)}
        |}""".stripMargin
   }
-}
-
-object PekkoSpecifics {
-  val PathVarTypes: StandardType => String = {
-    case StandardType("integer", Some("int64")) => "Long"
-    case StandardType("integer", _) => "Int"
-    case _ => "String"
-  }
-
-  val ResponseConstructorByHttpCode = Map[Int, String](
-    100 -> "Continue",
-    101 -> "SwitchingProtocols",
-    102 -> "Processing",
-    103 -> "EarlyHints",
-
-    200 -> "OK",
-    201 -> "Created",
-    202 -> "Accepted",
-    203 -> "NonAuthoritativeInformation",
-    204 -> "NoContent",
-    205 -> "ResetContent",
-    206 -> "PartialContent",
-    207 -> "MultiStatus",
-    208 -> "AlreadyReported",
-    226 -> "IMUsed",
-
-    300 -> "MultipleChoices",
-    301 -> "MovedPermanently",
-    302 -> "Found",
-    303 -> "SeeOther",
-    304 -> "NotModified",
-    305 -> "UseProxy",
-    307 -> "TemporaryRedirect",
-    308 -> "PermanentRedirect",
-
-    400 -> "BadRequest",
-    401 -> "Unauthorized",
-    402 -> "PaymentRequired",
-    403 -> "Forbidden",
-    404 -> "NotFound",
-    405 -> "MethodNotAllowed",
-    406 -> "NotAcceptable",
-    407 -> "ProxyAuthenticationRequired",
-    408 -> "RequestTimeout",
-    409 -> "Conflict",
-    410 -> "Gone",
-    411 -> "LengthRequired",
-    412 -> "PreconditionFailed",
-    413 -> "PayloadTooLarge",
-    414 -> "UriTooLong",
-    415 -> "UnsupportedMediaType",
-    416 -> "RangeNotSatisfiable",
-    417 -> "ExpectationFailed",
-    418 -> "ImATeapot",
-    420 -> "EnhanceYourCalm",
-    421 -> "MisdirectedRequest",
-    422 -> "UnprocessableEntity",
-    423 -> "Locked",
-    424 -> "FailedDependency",
-    425 -> "TooEarly",
-    426 -> "UpgradeRequired",
-    428 -> "PreconditionRequired",
-    429 -> "TooManyRequests",
-    431 -> "RequestHeaderFieldsTooLarge",
-    449 -> "RetryWith",
-    450 -> "BlockedByParentalControls",
-    451 -> "UnavailableForLegalReasons",
-
-    500 -> "InternalServerError",
-    501 -> "NotImplemented",
-    502 -> "BadGateway",
-    503 -> "ServiceUnavailable",
-    504 -> "GatewayTimeout",
-    505 -> "HttpVersionNotSupported",
-    506 -> "VariantAlsoNegotiates",
-    507 -> "InsufficientStorage",
-    508 -> "LoopDetected",
-    509 -> "BandwidthLimitExceeded",
-    510 -> "NotExtended",
-    511 -> "NetworkAuthenticationRequired",
-    598 -> "NetworkReadTimeout",
-    599 -> "NetworkConnectTimeout",
-  )
 }
