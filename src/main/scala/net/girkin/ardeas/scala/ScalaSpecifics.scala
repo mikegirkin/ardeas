@@ -43,50 +43,54 @@ object ScalaSpecifics extends Logging {
 
   object VariableNaming {
 
-    private def escapeIfReservedTerm(text: String) = {
-      val reservedWords = Set(
-        "abstract",
-        "case",
-        "catch",
-        "class",
-        "def",
-        "do",
-        "else",
-        "extends",
-        "false",
-        "final",
-        "finally",
-        "for",
-        "forSome",
-        "if",
-        "implicit",
-        "import",
-        "lazy",
-        "match",
-        "new",
-        "null",
-        "object",
-        "override",
-        "package",
-        "private",
-        "protected",
-        "return",
-        "sealed",
-        "super",
-        "this",
-        "throw",
-        "trait",
-        "true",
-        "try",
-        "type",
-        "val",
-        "var",
-        "while",
-        "with",
-        "yield"
-      )
+    private val reservedWords = Set(
+      "abstract",
+      "case",
+      "catch",
+      "class",
+      "def",
+      "do",
+      "else",
+      "extends",
+      "false",
+      "final",
+      "finally",
+      "for",
+      "forSome",
+      "if",
+      "implicit",
+      "import",
+      "lazy",
+      "match",
+      "new",
+      "null",
+      "object",
+      "override",
+      "package",
+      "private",
+      "protected",
+      "return",
+      "sealed",
+      "super",
+      "this",
+      "throw",
+      "trait",
+      "true",
+      "try",
+      "type",
+      "val",
+      "var",
+      "while",
+      "with",
+      "yield"
+    )
 
-      if (reservedWords.contains(text)) {
+    def isReservedWord(text: String) = {
+      reservedWords.contains(text)
+    }
+
+    private def escapeIfReservedTerm(text: String) = {
+      if (isReservedWord(text)) {
         escapeName(text)
       } else {
         text
