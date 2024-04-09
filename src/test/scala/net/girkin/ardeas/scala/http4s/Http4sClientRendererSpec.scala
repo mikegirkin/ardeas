@@ -4,11 +4,11 @@ import net.girkin.ardeas.ParsedSimplePetStore
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class ClientRendererSpec extends AnyWordSpec with Matchers {
+class Http4sClientRendererSpec extends AnyWordSpec with Matchers {
   "Http4s client renderer" should {
     "be able to render simple petstore" in {
 
-      val renderResult = ClientRenderer.renderClient(ParsedSimplePetStore.api, Some("test"), List("org.http4s.circe._"))
+      val renderResult = Http4sClientRenderer.renderClient(ParsedSimplePetStore.api, Some("test"), List("org.http4s.circe._"))
       val expected =
         """package test
           |

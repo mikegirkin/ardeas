@@ -188,6 +188,7 @@ object Http4sSpecifics {
       extendsClasses = Seq(adtTopName)
     )
   }
+
   private def renderOtherResponseCaseClass(adtTopName: String, standardFields: Vector[CaseClassFieldDescription]): String = {
     val otherResponseFields = Vector(
       CaseClassFieldDescription("httpCode", "Int"),

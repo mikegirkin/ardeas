@@ -111,6 +111,9 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
   - [ ] with discriminator
     - [x] circe
     - [ ] spray
+- [ ] Move packages rendeering from RenderUtils to ScalaSpecifics
+- [ ] Url-encode parameters passed in the path in client
+- [ ] Url-decode parameters passed in the path in server (check if required) 
 - [ ] Support headers in the responses
 - [ ] Improve error messaging in CLI
 - [ ] Packaging and release as uberjar

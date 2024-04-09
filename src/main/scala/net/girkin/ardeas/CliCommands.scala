@@ -5,7 +5,7 @@ import net.girkin.ardeas
 import net.girkin.ardeas.parser.Parser
 import net.girkin.ardeas.scala.codecs.{CodecRenderer, Scala2CirceCodecRenderer, SprayCodecRenderer}
 import net.girkin.ardeas.scala.entities.EntitiesRenderer
-import net.girkin.ardeas.scala.http4s.{ClientRenderer, ServiceRenderer}
+import net.girkin.ardeas.scala.http4s.{Http4sClientRenderer, ServiceRenderer}
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths}
@@ -106,10 +106,16 @@ final case class RenderService(openapiFilePath: Path, renderer: String, renderTo
 }
 
 final case class RenderClient(openapiFilePath: Path, renderer: String, renderToFilePath: Option[Path], `package`: Option[String], additionalImports: Vector[String]) extends CliCommand {
+  private val clientRendererImplementations = Map(
+    "http4s_scala2" -> net.girkin.ardeas.scala.http4s.Http4sClientRenderer,
+    "pekko_scala2" -> net.girkin.ardeas.scala.pekko.PekkoClientRenderer
+  )
+
   override def run(): Unit = {
     val apiModelV = Parser.parse(openapiFilePath.toUri)
-    val renderer = ClientRenderer
     val result = for {
+      renderer <- clientRendererImplementations.get(renderer)
+        .toRight(s"Unknown renderer implementation. Known implementations: ${clientRendererImplementations.keys.mkString(",")}")
       apiModel <- apiModelV.toEither.leftMap { errors =>
         s"Failed to parse OpenAPI spec. Errors: ${errors.iterator.mkString(System.lineSeparator(), System.lineSeparator(), "")}"
       }
