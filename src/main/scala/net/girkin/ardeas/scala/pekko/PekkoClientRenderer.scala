@@ -89,6 +89,7 @@ object PekkoClientRenderer extends ClientRenderer {
         CaseClassFieldDescription("httpCode", "Int")
       )
       case 405 => Vector(
+        //FIXME: What http4s does here?
         CaseClassFieldDescription("allowMethods", "Set[org.http4s.Method]")
       )
       case _ => Vector.empty
@@ -130,7 +131,7 @@ object PekkoClientRenderer extends ClientRenderer {
 
   private def renderClientInterface(api: Api) = {
     val methodDefinitions = api.paths.map { httpOperation =>
-      MethodNaming.methodDefinitionForOperation(httpOperation, PathVarTypes, appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[HttpHeader]", "Seq.empty")), effect = Some("Future"))
+      MethodNaming.methodDefinitionForOperation(httpOperation, PathVarTypes, appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[HttpHeader]", "Seq.empty")), effect = Some(str => s"Future[$str]"))
     }
 
     s"""trait Client {
@@ -139,7 +140,7 @@ object PekkoClientRenderer extends ClientRenderer {
   }
 
   private def renderSingleOperation(operation: HttpOperation): String = {
-    val methodDefinition = MethodNaming.methodDefinitionForOperation(operation, PathVarTypes, appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[HttpHeader]", "Seq.empty")), effect = Some("Future"))
+    val methodDefinition = MethodNaming.methodDefinitionForOperation(operation, PathVarTypes, appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[HttpHeader]", "Seq.empty")), effect = Some(str => s"Future[$str]"))
     val responseAdtTopName = MethodNaming.responseAdtTopName(operation, fullyQualified = true)
 
     val requestBuilder = requestBuilderLines(operation)

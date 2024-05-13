@@ -108,7 +108,8 @@ final case class RenderService(openapiFilePath: Path, renderer: String, renderTo
 final case class RenderClient(openapiFilePath: Path, renderer: String, renderToFilePath: Option[Path], `package`: Option[String], additionalImports: Vector[String]) extends CliCommand {
   private val clientRendererImplementations = Map(
     "http4s_scala2" -> net.girkin.ardeas.scala.http4s.Http4sClientRenderer,
-    "pekko_scala2" -> net.girkin.ardeas.scala.pekko.PekkoClientRenderer
+    "pekko_scala2" -> net.girkin.ardeas.scala.pekko.PekkoClientRenderer,
+    "sttp3_scala2" -> net.girkin.ardeas.scala.sttp3.Sttp3ClientRenderer
   )
 
   override def run(): Unit = {

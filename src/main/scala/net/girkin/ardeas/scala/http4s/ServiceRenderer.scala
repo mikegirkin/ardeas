@@ -138,7 +138,7 @@ object ServiceRenderer {
         PathVarTypes,
         prependedParameters = Map("request" -> "RequestData[F, I]"),
         appendedParameters = List(ParameterDefinitionWithDefault("headers", "Headers", "Headers.empty")),
-        effect = Some("F")
+        effect = Some(str => s"F[$str]")
       )
     }
 

@@ -103,8 +103,14 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Create directory when generating files
 - [x] Imports for spray codecs
 - [x] Fix spray optional codecs (petstore_ext)
+- [ ] sttp3 client generator
+- [ ] support OpenAPI 3.1 - parsing has changed between 3.0 and 3.1
+- [ ] pekko client generator contains reference to http4s in HTTP 405 response
+- [ ] duplicated code in client generators requires refactoring
 - [ ] Support "noDefaultImports" CLI option
-- [ ] Support escapes for internal variables in generated client/service to prevent name clashes with parameters 
+- [ ] Support escapes for internal variables in generated client/service to prevent name clashes with parameters
+- [ ] Allow option to treat inline schemas content as string or byte array
+- [ ] operationId might contain wierd characters, handle with backticks 
 - [ ] Support OneOf declaration
   - [ ] without discriminator
     - [x] circe
@@ -112,6 +118,8 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
   - [ ] with discriminator
     - [x] circe
     - [ ] spray
+- [ ] Support enums
+- [ ] Support trailing slash in paths
 - [ ] Move packages rendering from RenderUtils to ScalaSpecifics
 - [ ] Url-encode parameters passed in the path in client
 - [ ] Url-decode parameters passed in the path in server (check if required) 
