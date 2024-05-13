@@ -7,7 +7,7 @@ lazy val root = project
     version := "0.1.0-SNAPSHOT",
 
     libraryDependencies ++= Seq(
-      "io.swagger.parser.v3" % "swagger-parser-v3" % "2.1.12",
+      "io.swagger.parser.v3" % "swagger-parser-v3" % "2.1.22",
       "com.github.scopt"     %% "scopt"            % "4.1.0",
       "org.typelevel"        %% "cats-core" % "2.9.0",
 

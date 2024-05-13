@@ -3,7 +3,7 @@ package net.girkin.ardeas.scala
 import cats.data.ValidatedNec
 import net.girkin.ardeas.ValidatedUtils.*
 import net.girkin.ardeas.{Logging, Model}
-import net.girkin.ardeas.Model._
+import net.girkin.ardeas.Model.*
 import net.girkin.ardeas.RenderUtils.*
 
 case class NotYetImplemented(
@@ -118,7 +118,7 @@ object ScalaSpecifics extends Logging {
     def responseAdtTopName(operation: HttpOperation, fullyQualified: Boolean = false): String = {
       val adtTopName = capitalizeFirst(s"${methodNameForOperation(operation)}Response")
 
-      if(fullyQualified) {
+      if (fullyQualified) {
         s"Responses.${adtTopName}"
       } else {
         adtTopName
@@ -130,8 +130,7 @@ object ScalaSpecifics extends Logging {
       pathVarTypesTranslator: StandardType => String,
       prependedParameters: Map[String, String] = Map.empty,
       appendedParameters: List[ParameterDefinitionWithDefault] = List.empty,
-      effect: Option[String] = None,
-
+      effect: Option[String => String] = None,
     ): String = {
       val methodName = methodNameForOperation(operation)
       val pathParametersTypes: Map[String, String] =
@@ -150,10 +149,10 @@ object ScalaSpecifics extends Logging {
       }
 
       val bodyParameter = operation.requestBody.map {
-        case ref @ Model.RequestBody.NamedRef(_) =>
+        case ref@Model.RequestBody.NamedRef(_) =>
           s"body: ${TypeNaming.typeNameFromReference(ref, useFullyQualifiedRef = true)}"
 
-        case rb @ Model.RequestBody.Definition(_, _) =>
+        case rb@Model.RequestBody.Definition(_, _) =>
           val bodyParameterTypeName = rb.jsonContent.fold(
             "String"
           ) { schema =>
@@ -164,7 +163,7 @@ object ScalaSpecifics extends Logging {
       }
 
       val queryParameterDefinitions = operation.parameters.collect {
-        case Parameter.QueryParameter(parameterName, arrSchema @ Schema.Array(innerSchema), required) => {
+        case Parameter.QueryParameter(parameterName, arrSchema@Schema.Array(innerSchema), required) => {
           parameterName -> TypeNaming.typeDefinitionForArray(arrSchema)
         }
         case Parameter.QueryParameter(parameterName, schema, required) => {
@@ -187,7 +186,7 @@ object ScalaSpecifics extends Logging {
       val effectfullReturnType = effect.fold(
         cleanReturnType
       ) { e =>
-        s"$e[$cleanReturnType]"
+        e(cleanReturnType)
       }
 
       s"def $methodName(${parameterDefinitions.mkString(", ")}): $effectfullReturnType"
@@ -258,7 +257,7 @@ object ScalaSpecifics extends Logging {
     def typeNameForResponseBody(responseBody: ResponseBody): Option[String] = {
       responseBody match
         case ResponseBody.Definition(jsonContent) => jsonContent.map(schema => typeNameForNonAnonymousObjectSchema(schema, required = true))
-        case ref @ ResponseBody.NamedRef(_) => Some(typeNameFromReference(ref, useFullyQualifiedRef = true))
+        case ref@ResponseBody.NamedRef(_) => Some(typeNameFromReference(ref, useFullyQualifiedRef = true))
     }
 
   object Rendering {
@@ -273,8 +272,8 @@ object ScalaSpecifics extends Logging {
       effect: Option[String] = None
     ) = {
       val fieldLines = fields.map { field =>
-          s"${VariableNaming.variableName(field.name)}: ${field.typeDefinition}"
-        }.mkString("," + lineSeparator)
+        s"${VariableNaming.variableName(field.name)}: ${field.typeDefinition}"
+      }.mkString("," + lineSeparator)
 
       val prefix = classAccessModifier.map(_ + " ").getOrElse("")
       val extendsClause = extendsClasses.mkStringIfNonEmpty(
@@ -295,5 +294,4 @@ object ScalaSpecifics extends Logging {
          |)${suffix}""".stripMargin
     }
   }
-
 }

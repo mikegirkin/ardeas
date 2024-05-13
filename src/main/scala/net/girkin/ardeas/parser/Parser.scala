@@ -54,7 +54,8 @@ object Parser extends Logging:
     val knownResponseNames = unparsedNamedResponses.keys.toList
     val namedResponsesV = parseComponentsResponses(knownSchemaNames, unparsedNamedResponses)
 
-    val pathsV = parsePaths(knownSchemaNames, knownRequestBodiesNames, knownResponseNames, api.getPaths.asScala.toMap)
+    val paths = Option(api.getPaths).map(_.asScala).map(_.toMap).getOrElse(Map.empty)
+    val pathsV = parsePaths(knownSchemaNames, knownRequestBodiesNames, knownResponseNames, paths)
     (pathsV, namedSchemasV, namedRequestBodiesV, namedResponsesV).mapN { (paths, schemas, namedRequestBodies, namedResponses) =>
       Model.Api(
         paths = paths,

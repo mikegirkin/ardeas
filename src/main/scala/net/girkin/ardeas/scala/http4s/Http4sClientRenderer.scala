@@ -40,7 +40,7 @@ object Http4sClientRenderer extends ClientRenderer {
 
   def renderClientInterface(api: Api): String = {
     val methodDefinitions = api.paths.map { httpOperation =>
-      methodDefinitionForOperation(httpOperation, PathVarTypes, appendedParameters = List(headerParameter), effect = Some("F"))
+      methodDefinitionForOperation(httpOperation, PathVarTypes, appendedParameters = List(headerParameter), effect = Some(str => s"F[$str]"))
     }
 
     s"""trait Client[F[_]] {
@@ -52,7 +52,7 @@ object Http4sClientRenderer extends ClientRenderer {
     val renderedOperations = for {
       operation <- api.paths
     } yield {
-      s"""${methodDefinitionForOperation(operation, PathVarTypes, appendedParameters = List(headerParameter), effect = Some("F"))} = {
+      s"""${methodDefinitionForOperation(operation, PathVarTypes, appendedParameters = List(headerParameter), effect = Some(str => s"F[$str]"))} = {
          |${indent(2)(renderRequestForOperation(operation))}
          |}
          |""".stripMargin
