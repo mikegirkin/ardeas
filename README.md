@@ -103,7 +103,7 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Create directory when generating files
 - [x] Imports for spray codecs
 - [x] Fix spray optional codecs (petstore_ext)
-- [ ] sttp3 client generator
+- [x] sttp3 client generator
 - [ ] support OpenAPI 3.1 - parsing has changed between 3.0 and 3.1
 - [ ] pekko client generator contains reference to http4s in HTTP 405 response
 - [ ] duplicated code in client generators requires refactoring
