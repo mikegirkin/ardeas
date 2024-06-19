@@ -118,6 +118,20 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |import com.additional
           |
           |object Codecs {
+          |  implicit val SpeciesFormat: RootJsonFormat[Species] = new RootJsonFormat[Species] {
+          |    override def write(obj: Species): JsValue = obj match {
+          |      case Species.cat => JsString("cat")
+          |      case Species.dog => JsString("dog")
+          |      case Species.hamster => JsString("hamster")
+          |    }
+          |    override def read(json: JsValue): Species = {
+          |      json.asJsString match {
+          |        case "cat" => Species.cat
+          |        case "dog" => Species.dog
+          |        case "hamster" => Species.hamster
+          |      }
+          |    }
+          |  }
           |  implicit val PetFormat: RootJsonFormat[Pet] = new RootJsonFormat[Pet] {
           |    override def write(obj: Pet): JsValue = JsObject(
           |      "id" -> obj.id.toJson,
@@ -126,11 +140,12 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |      "created" -> obj.created.toJson,
           |      "weight" -> obj.weight.toJson,
           |      "height" -> obj.height.toJson,
-          |      "tag" -> obj.tag.toJson
+          |      "tag" -> obj.tag.toJson,
+          |      "species" -> obj.species.toJson
           |    )
           |    override def read(json: JsValue): Pet = {
-          |      json.asJsObject.getFields("id", "name", "birthDate", "created", "weight", "height", "tag") match {
-          |        case Seq(id, name, birthDate, created, weight, height, tag) =>
+          |      json.asJsObject.getFields("id", "name", "birthDate", "created", "weight", "height", "tag", "species") match {
+          |        case Seq(id, name, birthDate, created, weight, height, tag, species) =>
           |          Pet(
           |            id.convertTo[Long],
           |            name.convertTo[String],
@@ -138,7 +153,8 @@ class SprayCodecRendererSpec extends AnyWordSpec with Matchers {
           |            created.convertTo[Option[java.time.ZonedDateTime]],
           |            weight.convertTo[Option[Double]],
           |            height.convertTo[Option[Float]],
-          |            tag.convertTo[Option[String]]
+          |            tag.convertTo[Option[String]],
+          |            species.convertTo[Species]
           |          )
           |        case _ => throw DeserializationException(s"Could not deserialize ${json} to Pet")
           |      }

@@ -11,6 +11,7 @@ case class NotYetImplemented(
 )
 
 object ScalaSpecifics extends Logging {
+
   import Model.Schema.StandardType
 
   object KnownOpenApiTypes {
@@ -41,62 +42,62 @@ object ScalaSpecifics extends Logging {
     s"`$name`"
   }
 
+  def escapeIfReservedTerm(text: String) = {
+    if (isReservedWord(text)) {
+      escapeName(text)
+    } else {
+      text
+    }
+  }
+
+
+  private val reservedWords = Set(
+    "abstract",
+    "case",
+    "catch",
+    "class",
+    "def",
+    "do",
+    "else",
+    "extends",
+    "false",
+    "final",
+    "finally",
+    "for",
+    "forSome",
+    "if",
+    "implicit",
+    "import",
+    "lazy",
+    "match",
+    "new",
+    "null",
+    "object",
+    "override",
+    "package",
+    "private",
+    "protected",
+    "return",
+    "sealed",
+    "super",
+    "this",
+    "throw",
+    "trait",
+    "true",
+    "try",
+    "type",
+    "val",
+    "var",
+    "while",
+    "with",
+    "yield"
+  )
+
+  def isReservedWord(text: String) = {
+    reservedWords.contains(text)
+  }
+
   object VariableNaming {
-
-    private val reservedWords = Set(
-      "abstract",
-      "case",
-      "catch",
-      "class",
-      "def",
-      "do",
-      "else",
-      "extends",
-      "false",
-      "final",
-      "finally",
-      "for",
-      "forSome",
-      "if",
-      "implicit",
-      "import",
-      "lazy",
-      "match",
-      "new",
-      "null",
-      "object",
-      "override",
-      "package",
-      "private",
-      "protected",
-      "return",
-      "sealed",
-      "super",
-      "this",
-      "throw",
-      "trait",
-      "true",
-      "try",
-      "type",
-      "val",
-      "var",
-      "while",
-      "with",
-      "yield"
-    )
-
-    def isReservedWord(text: String) = {
-      reservedWords.contains(text)
-    }
-
-    private def escapeIfReservedTerm(text: String) = {
-      if (isReservedWord(text)) {
-        escapeName(text)
-      } else {
-        text
-      }
-    }
-
     def variableName(text: String) = {
       (escapeIfReservedTerm andThen lowercaseFirst)(text)
     }
@@ -210,10 +211,12 @@ object ScalaSpecifics extends Logging {
       val prefix = if (useFullyQualifiedRef) "Components.Schemas." else ""
       s"${prefix}${ref.name}"
     }
+
     def typeNameFromReference(ref: RequestBody.NamedRef, useFullyQualifiedRef: Boolean): String = {
       val prefix = if (useFullyQualifiedRef) "Components.RequestBodies." else ""
       s"${prefix}${ref.name}"
     }
+
     def typeNameFromReference(ref: ResponseBody.NamedRef, useFullyQualifiedRef: Boolean): String = {
       val prefix = if (useFullyQualifiedRef) "Components.Responses." else ""
       s"${prefix}${ref.name}"

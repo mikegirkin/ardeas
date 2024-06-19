@@ -125,11 +125,18 @@ paths:
                 $ref: "#/components/schemas/Transaction"
 components:
   schemas:
+    Species:
+      type: string
+      enum:
+        - cat
+        - dog
+        - hamster
     Pet:
       type: object
       required:
         - id
         - name
+        - species
       properties:
         id:
           type: integer
@@ -149,6 +156,8 @@ components:
           format: float
         tag:
           type: string
+        species:
+          $ref: '#/components/schemas/Species'
     Pets:
       type: array
       items:

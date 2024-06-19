@@ -104,6 +104,7 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [x] Imports for spray codecs
 - [x] Fix spray optional codecs (petstore_ext)
 - [x] sttp3 client generator
+- [x] Handle string enums in schemas
 - [ ] support OpenAPI 3.1 - parsing has changed between 3.0 and 3.1
 - [ ] pekko client generator contains reference to http4s in HTTP 405 response
 - [ ] duplicated code in client generators requires refactoring
@@ -131,7 +132,6 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
 - [ ] Support 1st level anonymous schemas for names Requests and Responses 
 - [ ] Support no content responses
 - [ ] Handle parameters from components 
-- [ ] Handle enums in schemas
 - [ ] Ability to provide serialization engine different than circe for http4s
 - [ ] Simplified method `makeRoutes` for service with the default value for preProcessHeaders
 - [ ] Simplified interface for service with no access to raw request

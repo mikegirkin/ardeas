@@ -23,6 +23,9 @@ class EntitiesRendererSpec extends AnyWordSpec with Matchers:
           Schema.Array(
             Schema.StandardType("string", None)
           ), true
+        ),
+        EntityField(
+          "species", NamedSchemaRef("Species"), true
         )
       )
       val purchase = Schema.makeObject(
@@ -51,6 +54,7 @@ class EntitiesRendererSpec extends AnyWordSpec with Matchers:
           "Transaction" -> transaction,
           "Purchase" -> purchase,
           "Refund" -> refund,
+          "Species" -> Schema.StringEnum(List("cat", "dog", "hamster"))
         ),
         namedRequestBodies = Map(
           "CreatePetBody" -> RequestBody.Definition(
@@ -80,21 +84,35 @@ class EntitiesRendererSpec extends AnyWordSpec with Matchers:
           |      created: Option[java.time.ZonedDateTime],
           |      weight: Option[Double],
           |      height: Option[Float],
-          |      tags: Vector[String]
+          |      tags: Vector[String],
+          |      species: Species
           |    )
+          |
           |    type Pets = Vector[Pet]
+          |
           |    type RenamedPet = Pet
+          |
           |    type UserId = Long
+          |
           |    sealed trait Transaction
+          |
           |    case class Purchase(
           |      id: Int,
           |      totalPaid: Int
           |    ) extends Transaction
+          |
           |    case class Refund(
           |      id: Int,
           |      purchaseId: Int,
           |      totalRefunded: Int
           |    ) extends Transaction
+          |
+          |    sealed trait Species
+          |    object Species {
+          |      case object cat extends Species
+          |      case object dog extends Species
+          |      case object hamster extends Species
+          |    }
           |  }
           |
           |  object RequestBodies {
