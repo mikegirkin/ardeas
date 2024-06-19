@@ -123,6 +123,10 @@ object Model:
       format: Option[String] = None
     ) extends Schema
 
+    final case class StringEnum(
+      `enum`: List[String]
+    ) extends Schema
+
     final case class HMap(
       itemSchema: InnerSchema
     ) extends Schema

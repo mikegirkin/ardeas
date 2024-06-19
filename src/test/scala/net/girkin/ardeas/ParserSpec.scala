@@ -140,6 +140,7 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
           )
         ),
         Map(
+          "Species" -> Model.Schema.StringEnum(List("cat", "dog", "hamster")),
           "Pet" -> Model.Schema.makeObject(
             Model.EntityField("id", Model.Schema.StandardType("integer", Some("int64")), true),
             Model.EntityField("name", Model.Schema.StandardType("string", None), true),
@@ -148,6 +149,7 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
             Model.EntityField("weight", Model.Schema.StandardType("number", None), false),
             Model.EntityField("height", Model.Schema.StandardType("number", Some("float")), false),
             Model.EntityField("tag", Model.Schema.StandardType("string", None), false),
+            Model.EntityField("species", NamedSchemaRef("Species"), true)
           ),
           "Pets" -> Model.Schema.Array(Model.NamedSchemaRef("Pet")),
           "Messages" -> Model.Schema.Array(Model.Schema.StandardType("string")),
@@ -217,7 +219,7 @@ class ParserSpec extends AnyWordSpec with Matchers with Inside:
 
       inside(result) {
         case Valid(parsedApi) => {
-          parsedApi.schemas shouldBe expected.schemas
+          parsedApi.schemas should contain theSameElementsAs expected.schemas
           parsedApi.paths shouldBe expected.paths
           parsedApi.namedRequestBodies shouldBe expected.namedRequestBodies
           parsedApi.namedResponses shouldBe expected.namedResponses

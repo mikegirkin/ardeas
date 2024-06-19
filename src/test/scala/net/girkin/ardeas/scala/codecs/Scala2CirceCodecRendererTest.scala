@@ -14,11 +14,15 @@ class Scala2CirceCodecRendererTest extends AnyWordSpec with Matchers {
     "render a codec for complete data setup" in {
       val api = Api(
         Vector.empty,
-        Map("Pet" -> Schema.makeObject(
-          EntityField("id", StandardType("integer"), true),
-          EntityField("name", StandardType("string"), true),
-          EntityField("tag", StandardType("string"), false)
-        )),
+        Map(
+          "Pet" -> Schema.makeObject(
+            EntityField("id", StandardType("integer"), true),
+            EntityField("name", StandardType("string"), true),
+            EntityField("tag", StandardType("string"), false),
+            EntityField("species", NamedSchemaRef("Species"), true)
+          ),
+          "Species" -> Schema.StringEnum(List("cat", "dog", "hamster"))
+        ),
         Map(
           "CreatePetRequest" -> RequestBody.Definition(
             true,
@@ -45,16 +49,38 @@ class Scala2CirceCodecRendererTest extends AnyWordSpec with Matchers {
           |        id <- c.downField("id").as[Int]
           |        name <- c.downField("name").as[String]
           |        tag <- c.downField("tag").as[Option[String]]
+          |        species <- c.downField("species").as[Species]
           |      } yield {
-          |        Pet(id, name, tag)
+          |        Pet(id, name, tag, species)
           |      }
           |    },
           |    (a: Pet) => {
           |      Json.obj(
           |        "id" -> a.id.asJson,
           |        "name" -> a.name.asJson,
-          |        "tag" -> a.tag.asJson
+          |        "tag" -> a.tag.asJson,
+          |        "species" -> a.species.asJson
           |      )
+          |    }
+          |  )
+          |  implicit val SpeciesCodec: Codec[Species] = Codec.from(
+          |    (c: HCursor) => {
+          |      for {
+          |        str <- c.as[String]
+          |      } yield {
+          |        str match {
+          |          case "cat" => Species.cat
+          |          case "dog" => Species.dog
+          |          case "hamster" => Species.hamster
+          |        }
+          |      }
+          |    },
+          |    (a: Species) => {
+          |      a match {
+          |        case Species.cat => Json.fromString("cat")
+          |        case Species.dog => Json.fromString("dog")
+          |        case Species.hamster => Json.fromString("hamster")
+          |      }
           |    }
           |  )
           |}""".stripMargin

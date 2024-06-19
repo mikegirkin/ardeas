@@ -308,7 +308,8 @@ object Parser extends Logging:
   private def parseSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String], schema: Schema[_]): ValidatedNec[ParsingError, SchemaOrRef] = {
     import ParserKleisliUtils.*
 
-    (parseStdTypeSchema orTryParseWith
+    (parseStringEnum orTryParseWith 
+      parseStdTypeSchema orTryParseWith
       parseObjectSchema(schemaLocation, knownSchemaNames) orTryParseWith
       parseNamedSchemaRef(knownSchemaNames) orTryParseWith
       parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith
@@ -334,10 +335,27 @@ object Parser extends Logging:
     }
   }
 
-  private val parseStdTypeSchema: PartialSchemaParser[Model.Schema.StandardType] = PartialSchemaParser.fromPartialFunction {
-    case stdType: OpenApiStandardTypeSchema =>
-      val parsedStdType = Model.Schema.StandardType(stdType.getType, Option(stdType.getFormat))
-      parsedStdType.validNec
+  private val parseStdTypeSchema: PartialSchemaParser[Model.Schema.StandardType] = {
+    type OtherStandardSchemas = IntegerSchema | BooleanSchema | NumberSchema | NumberSchema | DateSchema | DateTimeSchema | UUIDSchema
+
+    PartialSchemaParser.fromPartialOptionalFunction {
+      case stringSchema: StringSchema =>
+        if (Option(stringSchema.getEnum).isEmpty) {
+          Some(Model.Schema.StandardType(stringSchema.getType, Option(stringSchema.getFormat)).validNec)
+        } else {
+          None
+        }
+      case stdType: OtherStandardSchemas =>
+        val parsedStdType = Model.Schema.StandardType(stdType.getType, Option(stdType.getFormat))
+        Some(parsedStdType.validNec)
+    }
+  }
+
+  private val parseStringEnum: PartialSchemaParser[Model.Schema.StringEnum] = PartialSchemaParser.fromPartialOptionalFunction {
+    case stringType: StringSchema =>
+      Option(stringType.getEnum).map { enumFieldValue =>
+        Model.Schema.StringEnum(enumFieldValue.asScala.toList).validNec
+      }
   }
 
   private def parseNamedSchemaRef(knownSchemaNames: List[String]): PartialSchemaParser[Model.NamedSchemaRef] = Kleisli { schema =>
@@ -419,7 +437,7 @@ object Parser extends Logging:
   private def parseAsNonAnonymousObjectSchema(schemaLocation: PL.SchemaLocation, knownSchemaNames: List[String]): PartialSchemaParser[NonAnonymousObjectSchema] = {
     import ParserKleisliUtils.orTryParseWith
 
-    parseStdTypeSchema orTryParseWith 
+      parseStdTypeSchema orTryParseWith
       parseNamedSchemaRef(knownSchemaNames) orTryParseWith 
       parseArraySchema(schemaLocation, knownSchemaNames) orTryParseWith 
       parseObjectAsHMap(schemaLocation, knownSchemaNames)
@@ -501,6 +519,3 @@ object Parser extends Logging:
       .combineAll
       .map(_.toMap)
   }
-
-  type OpenApiStandardTypeSchema =
-    IntegerSchema | BooleanSchema | NumberSchema | StringSchema | NumberSchema | DateSchema | DateTimeSchema | UUIDSchema

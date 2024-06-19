@@ -25,6 +25,7 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
 
       val innerText = api.schemas.collect {
         case (name, obj: Model.Schema.Object) => renderCodecFor(name, obj)
+        case (name, stringEnum: Model.Schema.StringEnum) => renderCodecForEnum(name, stringEnum)
       }.mkString(System.lineSeparator())
 
       s"""${prefix}object Codecs {
@@ -38,6 +39,26 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
        |${indent(2)(renderWriter(typeName, entity))}
        |${indent(2)(renderReader(typeName, entity))}
        |}""".stripMargin
+
+  def renderCodecForEnum(typeName: String, stringEnum: Model.Schema.StringEnum): String = {
+    val decoderLines = stringEnum.`enum`.map { line =>
+      s"case \"${line}\" => ${typeName}.${line}"
+    }
+    val encoderLines = stringEnum.`enum`.map { line =>
+      s"case ${typeName}.${line} => JsString(\"${line}\")"
+    }
+
+    s"""implicit val ${typeName}Format: RootJsonFormat[${typeName}] = new RootJsonFormat[Species] {
+       |  override def write(obj: ${typeName}): JsValue = obj match {
+       |${indent(4)(encoderLines: _*)}
+       |  }
+       |  override def read(json: JsValue): ${typeName} = {
+       |    json.asJsString match {
+       |${indent(6)(decoderLines: _*)}
+       |    }
+       |  }
+       |}""".stripMargin
+  }
 
   def renderWriter(typeName: String, entity: Model.Schema.Object): String =
     val propertyEncodeLines = entity.fields
@@ -56,7 +77,7 @@ object SprayCodecRenderer extends CodecRenderer with Render with Logging:
       .mkString(", ")
     val scalaFieldNames = fieldNames.map { fieldName =>
       val variableName = ScalaSpecifics.VariableNaming.variableName(fieldName)
-      if(ScalaSpecifics.VariableNaming.isReservedWord(fieldName)) {
+      if(ScalaSpecifics.isReservedWord(fieldName)) {
         s"${variableName} @ _"
       } else {
         variableName

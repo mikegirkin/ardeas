@@ -68,7 +68,7 @@ object EntitiesRenderer extends Logging {
     val items = namedSchemas.map { case (name, model) =>
       renderNamedModel(name, model, required = true, adtConformance)
     }
-    items.mkString(lineSeparator)
+    items.mkString(doubleLineSeparator)
   }
 
   private def renderRequestBodies(namedRequestBodies: Map[String, Model.RequestBody.Definition]): Vector[String] = {
@@ -94,6 +94,7 @@ object EntitiesRenderer extends Logging {
       case arr: Model.Schema.Array => renderNamedArray(name, arr, required, useFullyQualifiedRef)
       case ref: NamedSchemaRef => renderNamedRef(name, ref, required, useFullyQualifiedRef)
       case std: Model.Schema.StandardType => renderNamedStandardType(name, std)
+      case stringEnum: Model.Schema.StringEnum => renderNamedStringEnum(name, stringEnum)
       case hmap: Model.Schema.HMap => renderNamedHmap(name, hmap)
       case oneof: Model.Schema.OneOf => renderNamedOneOf(name, oneof)
     }
@@ -107,6 +108,16 @@ object EntitiesRenderer extends Logging {
   private def renderNamedStandardType(newTypeName: String, std: Model.Schema.StandardType) = {
     val scalaType = typeNameFromStandardType(std)
     s"type ${newTypeName} = ${scalaType}"
+  }
+
+  private def renderNamedStringEnum(name: String, stringEnum: Model.Schema.StringEnum) = {
+    val lineItems = stringEnum.`enum`.map { item =>
+      s"case object ${ScalaSpecifics.escapeIfReservedTerm(item)} extends ${name}"
+    }
+    s"""sealed trait ${name}
+       |object ${name} {
+       |${indent(2)(lineItems:_*)}
+       |}""".stripMargin
   }
 
   private def renderCaseClassForNamedModel(

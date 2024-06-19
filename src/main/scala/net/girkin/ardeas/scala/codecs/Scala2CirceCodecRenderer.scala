@@ -13,7 +13,8 @@ object Scala2CirceCodecRenderer extends CodecRenderer with Render with Logging {
   override def renderCodecsForModels(api: Model.Api, `package`: Option[String], additionalImportPackages: Iterable[String]): ValidatedNec[NotYetImplemented, String] = {
     val renderedCodecs: ValidatedNec[NotYetImplemented, Vector[String]] = api.schemas.collect {
       case (name, obj: Model.Schema.Object) => renderCodecFor(name, obj)
-      case (name, oneOf: Model.Schema.OneOf) => renderCodecForOneOf(name, oneOf).validNec[NotYetImplemented]
+      case (name, stringEnum: Model.Schema.StringEnum) => renderCodecForEnum(name, stringEnum).validNec
+      case (name, oneOf: Model.Schema.OneOf) => renderCodecForOneOf(name, oneOf).validNec
     }.map {
       item => item.map(Vector(_))
     }.toVector.combineAll
@@ -47,6 +48,32 @@ object Scala2CirceCodecRenderer extends CodecRenderer with Render with Logging {
          |${indent(2)(encoder)}
          |)""".stripMargin
     }
+  }
+
+  def renderCodecForEnum(typeName: String, stringEnum: Model.Schema.StringEnum): String = {
+    val decoderLines = stringEnum.`enum`.map { line =>
+      s"case \"${line}\" => ${typeName}.${line}"
+    }
+    val encoderLines = stringEnum.`enum`.map { line =>
+      s"case ${typeName}.${line} => Json.fromString(\"${line}\")"
+    }
+
+    s"""implicit val ${typeName}Codec: Codec[${typeName}] = Codec.from(
+       |  (c: HCursor) => {
+       |    for {
+       |      str <- c.as[String]
+       |    } yield {
+       |      str match {
+       |${indent(8)(decoderLines:_*)}
+       |      }
+       |    }
+       |  },
+       |  (a: ${typeName}) => {
+       |    a match {
+       |${indent(6)(encoderLines:_*)}
+       |    }
+       |  }
+       |)""".stripMargin
   }
 
   def renderCodecForOneOf(typeName: String, oneOf: Model.Schema.OneOf): String = {
