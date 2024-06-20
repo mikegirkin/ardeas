@@ -54,7 +54,10 @@ object Sttp3ClientRenderer extends ClientRenderer {
         .appendedAll(unexpectedResponseCaseClass)
         .appended(renderDeserializationErrorResponseObject(adtTopName))
 
-      s"""sealed trait $adtTopName extends Product with Serializable
+      s"""sealed trait $adtTopName extends Product with Serializable {
+         |  def headers: Seq[Header]
+         |  def statusCode: Int
+         |}
          |${indent(0)(caseClasses: _*)}
          |
          |""".stripMargin + lineSeparator
@@ -67,7 +70,9 @@ object Sttp3ClientRenderer extends ClientRenderer {
 
   private def renderOtherResponseObject(adtTopName: String): String = {
     s"""final case class ${responseCaseClassName(adtTopName, None)}(
-       |  content: String
+       |  content: String,
+       |  statusCode: Int,
+       |  headers: Seq[Header]
        |) extends ${adtTopName}""".stripMargin
   }
 
@@ -78,6 +83,8 @@ object Sttp3ClientRenderer extends ClientRenderer {
   private def renderDeserializationErrorResponseObject(adtTopName: String): String = {
     s"""final case class ${deserializationErrorResponseClassName(adtTopName)}[Err](
        |  content: String,
+       |  statusCode: Int,
+       |  headers: Seq[Header],
        |  error: Err
        |) extends ${adtTopName}""".stripMargin
   }
@@ -87,21 +94,29 @@ object Sttp3ClientRenderer extends ClientRenderer {
     s"$adtTopName${responseName}"
   }
 
-  private def renderResponseCaseClass(adtTopName: String, standardFields: Vector[CaseClassFieldDescription] = Vector.empty)(response: Response): String = {
+  private def renderResponseCaseClass(adtTopName: String)(response: Response): String = {
     val caseClassName = responseCaseClassName(adtTopName, Some(response.httpCode))
 
     val responseFields = Vector.concat(
       TypeNaming.typeNameForResponseBody(response.body).map { typeDefinition =>
         CaseClassFieldDescription("content", typeDefinition)
       },
-      standardFields
+      List(
+        CaseClassFieldDescription("headers", "Seq[Header]")
+      )
     )
+
+    val caseClassBody = response.httpCode match {
+      case Default => None
+      case statusCode => Some(s"val statusCode = ${statusCode}")
+    }
 
     Rendering.renderCaseClass(
       caseClassName,
       responseFields,
       classAccessModifier = Some("final"),
-      extendsClasses = Seq(adtTopName)
+      extendsClasses = Seq(adtTopName),
+      methodsBody = caseClassBody
     )
   }
 
@@ -111,7 +126,7 @@ object Sttp3ClientRenderer extends ClientRenderer {
     appendParameters: List[ParameterDefinitionWithDefault] = List.empty
   ): String = {
     val methodDefinitions = api.paths.map { httpOperation =>
-      MethodNaming.methodDefinitionForOperation(httpOperation, pathVarTypesTranslator, appendedParameters = appendParameters, effect = Some(str => s"F[Response[$str]]"))
+      MethodNaming.methodDefinitionForOperation(httpOperation, pathVarTypesTranslator, appendedParameters = appendParameters, effect = Some(str => s"F[$str]"))
     }
 
     s"""trait Client[F[_]] {
@@ -143,7 +158,7 @@ object Sttp3ClientRenderer extends ClientRenderer {
       operation,
       PathVarTypes,
       appendedParameters = List(ParameterDefinitionWithDefault("headers", "Seq[Header]", "Seq.empty")),
-      effect = Some(str => s"F[Response[$str]]")
+      effect = Some(str => s"F[$str]")
     )
     val responseAdtTopName = MethodNaming.responseAdtTopName(operation, fullyQualified = true)
 
@@ -196,7 +211,7 @@ object Sttp3ClientRenderer extends ClientRenderer {
       case Response(httpCode: Int, body) => renderResponseProcessor(responseAdtTopName, httpCode, body)
     }
 
-    val allResponseProcessors = responseProcessors.prepended(otherResponseProcessor)
+    val allResponseProcessors = responseProcessors.appended(otherResponseProcessor)
     val bodySender = operation.requestBody.map { _ =>
       ".body(serialize(body))"
     }
@@ -206,13 +221,17 @@ object Sttp3ClientRenderer extends ClientRenderer {
 
     s"""${methodDefinition} = {
        |${indent(2)(urlBuilder)}
-       |  basicRequest
+       |  val responseF = basicRequest
        |${indent(4)(methodAndBodySegment)}
        |    .headers(defaultHeaders.concat(headers):_*)
-       |    .response(fromMetadata(
-       |${indent(6, separator = "," + lineSeparator)(allResponseProcessors:_*)}
-       |    ))
+       |    .response(asStringAlways)
        |    .send(backend)
+       |
+       |  backend.responseMonad.map(responseF) { response =>
+       |    response.code.code match {
+       |${indent(6)(allResponseProcessors:_*)}
+       |    }
+       |  }
        |}""".stripMargin
   }
 
@@ -221,24 +240,24 @@ object Sttp3ClientRenderer extends ClientRenderer {
     val entityConstructorArgumentOpt = renderResponseEntityConstructorExpression(responseBody)
     val deserializationErrorCaseClassName = deserializationErrorResponseClassName(responseAdtTopName)
     entityConstructorArgumentOpt.fold (
-      s"""asStringAlways.map[$responseAdtTopName] { content =>
-         |  ${caseClassName}()
-         |}""".stripMargin
+      s"""case _ =>
+         |  ${caseClassName}(response.headers)
+         |""".stripMargin
     ) ( deserializer =>
-      s"""asStringAlways.map[$responseAdtTopName] { content =>
+      s"""case _ =>
          |  $deserializer.fold(
-         |    error => $deserializationErrorCaseClassName(content, error),
-         |    entity => ${caseClassName}(entity)
+         |    error => $deserializationErrorCaseClassName(response.body, response.code.code, response.headers, error),
+         |    entity => ${caseClassName}(entity, response.headers)
          |  )
-         |}""".stripMargin
+         |""".stripMargin
     )
   }
 
   private def renderOtherResponseProcessor(responseAdtTopName: String) = {
     val caseClassName = responseCaseClassName(responseAdtTopName, None)
-    s"""asStringAlways.map[$responseAdtTopName] { content =>
-       |  ${caseClassName}(content)
-       |}""".stripMargin
+    s"""case _ =>
+       |  ${caseClassName}(response.body, response.code.code, response.headers)
+       |""".stripMargin
   }
 
   private def renderResponseProcessor(responseAdtTopName: String, statusCode: Int, responseBody: ResponseBody) = {
@@ -247,16 +266,16 @@ object Sttp3ClientRenderer extends ClientRenderer {
     val caseClassName = responseCaseClassName(responseAdtTopName, Some(statusCode))
     val deserializationErrorCaseClassName = deserializationErrorResponseClassName(responseAdtTopName)
     entityConstructorArgumentOpt.fold(
-      s"""ConditionalResponseAs(_.code.code == ${statusCode}, asStringAlways.map[$responseAdtTopName] { content =>
-         |  ${caseClassName}()
-         |})""".stripMargin
+      s"""case ${statusCode} =>
+         |  ${caseClassName}(response.headers)
+         |""".stripMargin
     ) ( deserializer =>
-      s"""ConditionalResponseAs(_.code.code == ${statusCode}, asStringAlways.map[$responseAdtTopName] { content =>
+      s"""case ${statusCode} =>
          |  $deserializer.fold(
-         |    error => $deserializationErrorCaseClassName(content, error),
-         |    entity => ${caseClassName}(entity)
+         |    error => $deserializationErrorCaseClassName(response.body, response.code.code, response.headers, error),
+         |    entity => ${caseClassName}(entity, response.headers)
          |  )
-         |})""".stripMargin
+         |""".stripMargin
     )
   }
 
@@ -266,7 +285,7 @@ object Sttp3ClientRenderer extends ClientRenderer {
       case r@ResponseBody.NamedRef(_) => Some(TypeNaming.typeNameFromReference(r, useFullyQualifiedRef = true))
     }
     responseEntityTypeNameOpt.map(typeName =>
-      s"deserialize[$typeName](content)"
+      s"deserialize[$typeName](response.body)"
     )
   }
 
