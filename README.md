@@ -1,15 +1,21 @@
 # Ardeas
 
+*Ardeas* (Greek Ἀρδείας) - son of Odysseus and Circe
+
 This is a client and service skeleton code generator from OpenAPI specs
 
 ## Limitations at the moment:
 
-- no support for anonymous objects anywhere
+- no support for inline schema definitions anywhere
 - no support for OpenAPI auth specification
 - no support for parameters in `components`
 - Only `oneOf` construct containing refs is supported
 - no support for `allOf` and `anyOf` constructs
 - only supports `application/json` responses media type
+- all generators assume Scala 2.13 as a target language
+- path templating only works for when parameters are split with "/"
+- no trailing slash expected in the paths
+
 
 # Current generators
 
@@ -17,6 +23,7 @@ This is a client and service skeleton code generator from OpenAPI specs
 - JSON codecs using `spray` and `circe` libs
 - `http4s` service skeleton with an abstract effect (ie. non-binding to `cats.effect`)
 - `http4s`-based client, with an abstract effect
+- `sttp3`-based client
 
 # CLI
 
@@ -51,6 +58,8 @@ sbt "run service ./src/test/resources/petstore_complete.yaml http4s_scala2 ../se
 
 ## Client
 
+### http4s
+
 ```shell
 sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../client.scala \
   --package net.girkin.petstore.complete.client
@@ -58,12 +67,48 @@ sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../cli
   --additionalImport net.girkin.petstore.complete.client.Codecs._"
 ```
 
-# Assumptions
-- No anonymous types
-- Only Json media type
-- path templating only works for when parameters are split with "/"
-- path parameters must be required
-- models & codecs & (service | client) must sit in the same package
+### sttp3
+
+```shell
+sbt "run client ./src/test/resources/petstore_complete.yaml sttp3_scala2 ../client.scala \
+  --package net.girkin.petstore.complete.client \
+  --additionalImport net.girkin.petstore.complete.client.Codecs._"
+```
+
+The client generated assumes that there is 2 functions defined and in the scope
+
+```scala
+  def deserialize[T](str: String): Either[Error, T]
+  def serialize[T](entity: T): String
+```
+
+When using `Circe` for json serialization, this could be achieved by putting this into the project:
+
+```scala
+package util
+
+import io.circe._
+
+object CirceInterop {
+  def deserialize[T: Decoder](str: String): Either[Error, T] = {
+    parser.decode(str)
+  }
+
+  def serialize[T: Encoder](entity: T): String = {
+    implicitly[Encoder[T]].apply(entity).toString()
+  }
+}
+```
+
+And then adding `additionalImport` parameter to the client generation starter, like this:
+
+```shell
+sbt "run client ./src/test/resources/petstore_complete.yaml sttp3_scala2 ../client.scala \
+  --package net.girkin.petstore.complete.client \
+  --additionalImport util.CirceInterop_ \
+  --additionalImport net.girkin.petstore.complete.client.Codecs._"
+```
+
 
 # TODO
 
