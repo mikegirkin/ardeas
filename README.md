@@ -51,9 +51,9 @@ sbt "run codecs ./src/test/resources/petstore.yaml circe_scala2 ./codecs.scala -
 
 ```shell
 sbt "run service ./src/test/resources/petstore_complete.yaml http4s_scala2 ../service.scala \
-  --package net.girkin.petstore.complete.service \
+  --package io.github.mikegirkin.petstore.complete.service \
   --additionalImport org.http4s.circe.CirceEntityCodec._ \
-  --additionalImport net.girkin.petstore.complete.service.Codecs._"
+  --additionalImport io.github.mikegirkin.petstore.complete.service.Codecs._"
 ```
 
 ## Client
@@ -62,17 +62,17 @@ sbt "run service ./src/test/resources/petstore_complete.yaml http4s_scala2 ../se
 
 ```shell
 sbt "run client ./src/test/resources/petstore_complete.yaml http4s_scala2 ../client.scala \
-  --package net.girkin.petstore.complete.client
+  --package io.github.mikegirkin.petstore.complete.client
   --additionalImport org.http4s.circe.CirceEntityCodec._ \
-  --additionalImport net.girkin.petstore.complete.client.Codecs._"
+  --additionalImport io.github.mikegirkin.petstore.complete.client.Codecs._"
 ```
 
 ### sttp3
 
 ```shell
 sbt "run client ./src/test/resources/petstore_complete.yaml sttp3_scala2 ../client.scala \
-  --package net.girkin.petstore.complete.client \
-  --additionalImport net.girkin.petstore.complete.client.Codecs._"
+  --package io.github.mikegirkin.petstore.complete.client \
+  --additionalImport io.github.mikegirkin.petstore.complete.client.Codecs._"
 ```
 
 The client generated assumes that there is 2 functions defined and in the scope
@@ -104,9 +104,9 @@ And then adding `additionalImport` parameter to the client generation starter, l
 
 ```shell
 sbt "run client ./src/test/resources/petstore_complete.yaml sttp3_scala2 ../client.scala \
-  --package net.girkin.petstore.complete.client \
-  --additionalImport util.CirceInterop_ \
-  --additionalImport net.girkin.petstore.complete.client.Codecs._"
+  --package io.github.mikegirkin.petstore.complete.client \
+  --additionalImport util.CirceInterop._ \
+  --additionalImport io.github.mikegirkin.petstore.complete.client.Codecs._"
 ```
 
 
