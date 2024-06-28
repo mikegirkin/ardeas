@@ -2,7 +2,7 @@ import xerial.sbt.Sonatype.sonatypeCentralHost
 
 
 val commonSettings = Seq(
-  ThisBuild / version := "0.1.0",
+  ThisBuild / version := "0.1.1-SNAPSHOT",
   ThisBuild / organization := "io.github.mikegirkin",
   usePgpKeyHex("50A47A03CCB118C0CE4DEB2FCD18B86413990F3F"),
   ThisBuild / publishMavenStyle := true,
