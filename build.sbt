@@ -43,16 +43,19 @@ lazy val root = project
     libraryDependencies ++= Seq(
       "io.swagger.parser.v3" % "swagger-parser-v3" % "2.1.22",
       "com.github.scopt"     %% "scopt"            % "4.1.0",
-      "org.typelevel"        %% "cats-core" % "2.9.0",
+      "org.typelevel"        %% "cats-core"        % "2.12.0",
+      "com.monovore"         %% "decline"          % "2.4.1",
 
-      "ch.qos.logback"       % "logback-classic"          % "1.4.7",
-      "net.logstash.logback" % "logstash-logback-encoder" % "7.3",
 
-      "org.scalatest" %% "scalatest" % "3.2.15" % Test
+      "ch.qos.logback"       % "logback-classic"          % "1.5.6",
+      "net.logstash.logback" % "logstash-logback-encoder" % "7.4",
+
+      "org.scalatest" %% "scalatest" % "3.2.18" % Test
     ),
 
     scalacOptions ++= Seq(
       "-unchecked",
+      "-deprecation",
       "-Xfatal-warnings",
     )
   )
